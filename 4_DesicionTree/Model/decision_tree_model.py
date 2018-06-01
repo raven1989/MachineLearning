@@ -2,6 +2,8 @@ import sys
 import math
 import numpy as np
 import collections
+from graphviz import Digraph
+import seaborn as sns
 
 class DecisionTreeModel:
 
@@ -71,6 +73,7 @@ class DecisionTreeModel:
         for v in col:
           if feature.get_index_by_feature_value(v) == None:
             feature.append_feature_value(v)
+        # print("{} : {}".format(feature.feature_name, feature.feavalue2index))
       self.features.append(feature)
     # print(",".join([x.feature_name for x in self.features]))
     # print(",".join([str(x.feature_type) for x in self.features]))
@@ -136,6 +139,7 @@ class DecisionTreeModel:
 
   def __make_leaf_node__(self, feature, label, samples):
     leaf = {"label":feature.get_feature_value_by_index(label), 
+        "feature_index":feature.feature_index,
         "is_leaf":True,
         "samples":samples,
         }
@@ -143,13 +147,14 @@ class DecisionTreeModel:
   def __make_non_leaf_node__(self, feature, gain, samples, boundary, children):
     non_leaf = {"feature":feature.feature_name, 
         "type":feature.feature_type,
+        "feature_index":feature.feature_index,
         "is_leaf":False, 
         "gain":gain, 
         "samples":samples, 
         "children":children,
         }
     if non_leaf["type"] == self.Feature.FeatureType.CONTINUOUS:
-      non_leaf["boundary"] = boundary,
+      non_leaf["boundary"] = boundary
     return non_leaf
 
   def __generate_decision_tree_recursively__(self, model, data, feature_candidates):
@@ -205,6 +210,7 @@ class DecisionTreeModel:
             children[True] = child_lt
           if child_gt != None:
             children[False] = child_gt
+          # print(max_boundary)
         node = self.__make_non_leaf_node__(chosen_feature, max_gain,  
             samples, max_boundary, children)
     if is_leaf == True:
@@ -219,5 +225,131 @@ class DecisionTreeModel:
     self.__data_preprocess__(data)
     feature_candidates = [fea for fea in self.features[:-1]]
     self.root = self.__generate_decision_tree_recursively__(model, self.data, feature_candidates)
+
+  def predict(self, data):
+    labels = []
+    for sample in data:
+      cursor = self.root
+      if cursor == None:
+        raise ValueError("DecisionTreeModel is not ready, call fit first.")
+      children = cursor.get("children")
+      while children!=None:
+        fea_name = cursor.get("feature")
+        fea_type = cursor.get("type")
+        fea_idx = cursor.get("feature_index")
+        fea = self.features[fea_idx]
+        if fea_type == self.Feature.FeatureType.DISCRETE:
+          key = sample[fea_idx]
+        elif fea_type == self.Feature.FeatureType.CONTINUOUS:
+          boundary = cursor.get("boundary")
+          key = sample[fea_idx]<=boundary
+        else:
+          raise ValueError("DecisionTreeModel feature does not has type:{}".format(fea_type))
+        cursor = children.get(key)
+        if cursor == None:
+          raise ValueError("DecisionTreeModel feature:{} does not recognize value:{}".format(fea_name, sample[fea_idx]))
+        children = cursor.get("children")
+      label = cursor.get("label")
+      labels.append(label)
+    return np.array(labels)
+
+  def __node_str__(self, node):
+    show = []
+    for k in node:
+      if k not in ["children","type","is_leaf","feature_index"]:
+        show.append(str(k)+":"+str(node[k]).decode('utf-8'))
+    return "\n".join(show)
+
+  def __color_brew__(self, n):
+    """Generate n colors with equally spaced hues.
+
+      Parameters
+      ----------
+      n : int
+          The number of colors required.
+
+      Returns
+      -------
+      color_list : list, length n
+          List of n tuples of form (R, G, B) being the components of each color.
+      """
+    color_list = []
+
+    # Initialize saturation & value; calculate chroma & value shift
+    s, v = 0.75, 0.9
+    c = s * v
+    m = v - c
+
+    for h in np.arange(25, 385, 360. / n).astype(int):
+      # Calculate some intermediate values
+        h_bar = h / 60.
+        x = c * (1 - abs((h_bar % 2) - 1))
+        # Initialize RGB with same hue & chroma as our color
+        rgb = [(c, x, 0),
+            (x, c, 0),
+            (0, c, x),
+            (0, x, c),
+            (x, 0, c),
+            (c, 0, x),
+            (c, x, 0)]
+        r, g, b = rgb[int(h_bar)]
+        # Shift the initial RGB values to match value and store
+        rgb = [(int(255 * (r + m))),
+            (int(255 * (g + m))),
+            (int(255 * (b + m)))]
+        color_list.append(rgb)
+
+    return color_list
+
+  def __color_brew_from_seaborn__(self):
+    # palette = sns.color_palette("BuGn_r").as_hex()
+    # palette = sns.color_palette("husl", 8).as_hex()
+    palette = sns.color_palette("GnBu_d").as_hex()
+    return palette
+
+  def __get_color__(self, color):
+    # Return html color code in #RRGGBBAA format
+    # alpha = 0
+    # color.append(alpha)
+    hex_codes = [str(i) for i in range(10)]
+    hex_codes.extend(['a', 'b', 'c', 'd', 'e', 'f'])
+    color = [hex_codes[c // 16] + hex_codes[c % 16] for c in color]
+    return '#' + ''.join(color)
+
+  def export_graphviz(self):
+    if self.root == None:
+      raise ValueError("DecisionTreeModel is not ready, call fit first.")
+    n_features = len(self.features)
+    # color_list = self.__color_brew__(n_features)
+    color_list = self.__color_brew_from_seaborn__()
+    # print(color_list)
+    # dot = Digraph(comment = "Decision Tree", node_attr={"shape":"component"})
+    dot = Digraph(comment = "Decision Tree", node_attr={"shape":"box", "style":"rounded,filled"})
+    cnt = 0
+    q = [(str(cnt), self.root)]
+    for_show = []
+    label = self.__node_str__(self.root)
+    # color = "%d,%d,%d" % tuple(color_list[self.root.get("feature_index",0)%len(color_list)])
+    # color = self.__get_color__(color_list[self.root.get("feature_index",0)%len(color_list)])
+    color = color_list[self.root.get("feature_index",0)%len(color_list)]
+    # print(color)
+    dot.node(name=str(cnt), label=label, fillcolor=color)
+    parent_name = str(cnt)
+    cnt += 1
+    while len(q) > 0:
+      parent_name, parent = q.pop(0)
+      children = parent.get("children")
+      if children!=None and len(children)>0:
+        for k,v in children.items():
+          name = str(cnt)
+          # color = "%d,%d,%d" % tuple(color_list[v.get("feature_index",0)%len(color_list)])
+          # color = self.__get_color__(color_list[v.get("feature_index",0)%len(color_list)])
+          color = color_list[v.get("feature_index",0)%len(color_list)]
+          # print(color)
+          dot.node(name=name, label=self.__node_str__(v), fillcolor=color)
+          dot.edge(parent_name, name, label=str(k))
+          cnt += 1
+          q.append((name,v))
+    return dot
 
 

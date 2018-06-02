@@ -82,11 +82,17 @@ class DecisionTreeModel:
     self.data = np.array(d)
 
   class AlgoModel:
-    def gain(self, data, feature):
+    @property
+    def name(self):
+      return "Abstract Model"
+    def select_feature(self, data, feature_candidates):
       raise NotImplementedError("Abstract method gain must be implemented.")
 
   class Id3Model(AlgoModel):
     EPSILON = 1e-6
+    @property
+    def name(self):
+      return "Entropy Gain"
     def __entropy__(self, labels):
       y = np.reshape(labels, -1)
       y_counter = collections.Counter(y)
@@ -97,7 +103,7 @@ class DecisionTreeModel:
         ent -= p * math.log(p,2) if p>0.0 else 0.0
       return ent
     ## return gain and boundary value if it's continuous feature
-    def gain(self, data, feature):
+    def __gain__(self, data, feature):
       # if type(feature) != type(DecisionTreeModel.Feature):
         # raise ValueError("Need type {} for feature".format(DecisionTreeModel.Feature))
       x = data[:,:-1]
@@ -116,8 +122,8 @@ class DecisionTreeModel:
       elif feature.feature_type == DecisionTreeModel.Feature.FeatureType.CONTINUOUS:
         sorted_fea = sorted(np.reshape(data[:,feature.feature_index], -1))
         boundary_candidates = [(sorted_fea[i]+sorted_fea[i+1])/2.0 for i in range(len(sorted_fea)-1)]
-        boundary_candidates.append(sorted_fea[0]-self.EPSILON)
-        boundary_candidates.append(sorted_fea[-1]+self.EPSILON)
+        # boundary_candidates.append(sorted_fea[0]-self.EPSILON)
+        # boundary_candidates.append(sorted_fea[-1]+self.EPSILON)
         ## find boundary s.t. min entropy(d,boundary)
         min_b = None
         min_d_ent = None
@@ -134,8 +140,89 @@ class DecisionTreeModel:
         gain = whole_ent - min_d_ent
         boundary = min_b
       return gain, boundary
+    ## choose feature s.t. max gain
+    def select_feature(self, data, feature_candidates):
+      is_leaf = False
+      fea_gains = []
+      max_fea_idx = None
+      max_gain = 0.0
+      max_boundary = 0.0
+      for i,feature in enumerate(feature_candidates):
+        fea_gain, boundary = self.__gain__(data, feature)
+        fea_gains.append(fea_gain)
+        if fea_gain > max_gain:
+          max_fea_idx = i
+          max_gain = fea_gain
+          max_boundary = boundary
+      ## all feature gains are the same, it's a leaf node
+      _, gain_most_cnt = collections.Counter(fea_gains).most_common(1)[0]     
+      if gain_most_cnt == len(fea_gains):
+        is_leaf = True
+      return is_leaf, max_fea_idx, max_gain, max_boundary
 
-  ALGO_MODEL_FACTORY = {"id3" : Id3Model}
+  class CartModel(AlgoModel):
+    @property
+    def name(self):
+      return "Gini"
+    def __gini__(self, labels):
+      y = np.reshape(labels, -1)
+      y_counter = collections.Counter(y)
+      total = sum(y_counter.values())
+      gini = 1.0
+      for n in y_counter.values():
+        pk = n*1.0/total
+        gini -= pk * pk
+      return gini
+    ## compute feature's gini index
+    def __gini_index__(self, data, feature):
+      gini_index = None
+      boundary = 0.0
+      total = len(data[:,-1])
+      if feature.feature_type == DecisionTreeModel.Feature.FeatureType.DISCRETE:
+        gini_index = 0.0
+        for fea_idx in feature.index2feavalue:
+          divided = data[data[:,feature.feature_index]==fea_idx, -1]
+          n_samples = len(divided)
+          w = n_samples*1.0/total
+          gini_index += w * self.__gini__(divided)
+      elif feature.feature_type == DecisionTreeModel.Feature.FeatureType.CONTINUOUS:
+        sorted_fea = sorted(np.reshape(data[:,feature.feature_index], -1))
+        boundary_candidates = [sorted_fea[i]-(sorted_fea[i]-sorted_fea[i+1])/2.0 
+            for i in range(len(sorted_fea)-1)]
+        gini_index = None
+        boundary = None
+        for b in boundary_candidates:
+          label_lt = data[data[:,feature.feature_index]<=b, -1]
+          label_gt = data[data[:,feature.feature_index]>b, -1]
+          w_lt = len(label_lt)*1.0/total
+          w_gt = len(label_gt)*1.0/total
+          cur_gini_index = self.__gini__(label_lt)*w_lt + self.__gini__(label_gt)*w_gt
+          if gini_index == None or cur_gini_index < gini_index:
+            gini_index = cur_gini_index
+            boundary = b
+      return gini_index, boundary
+    ## choose feature s.t. min gini_index(d,f)
+    def select_feature(self, data, feature_candidates):
+      is_leaf = False
+      gini_indexes = []
+      chosen_gini_index = None
+      chosen_feature_idx = 0
+      chosen_boundary = 0.0
+      for i,feature in enumerate(feature_candidates):
+        fea_idx = feature.feature_index
+        gini_index, boundary = self.__gini_index__(data, feature)
+        gini_indexes.append(gini_index)
+        if chosen_gini_index == None or gini_index < chosen_gini_index:
+          chosen_gini_index = gini_index
+          chosen_feature_idx = i
+          chosen_boundary = boundary
+      gini_counter = collections.Counter(gini_indexes)
+      if gini_counter.most_common(1)[0] == len(gini_indexes):
+        is_leaf = True
+      return is_leaf, chosen_feature_idx, chosen_gini_index, chosen_boundary
+
+  ALGO_MODEL_FACTORY = {"id3" : Id3Model, 
+      "cart" : CartModel}
 
   def __make_leaf_node__(self, feature, label, samples):
     leaf = {"label":feature.get_feature_value_by_index(label), 
@@ -144,12 +231,12 @@ class DecisionTreeModel:
         "samples":samples,
         }
     return leaf
-  def __make_non_leaf_node__(self, feature, gain, samples, boundary, children):
+  def __make_non_leaf_node__(self, model, feature, model_value, samples, boundary, children):
     non_leaf = {"feature":feature.feature_name, 
         "type":feature.feature_type,
         "feature_index":feature.feature_index,
         "is_leaf":False, 
-        "gain":gain, 
+        model.name:"%.4f"%float(model_value), 
         "samples":samples, 
         "children":children,
         }
@@ -169,29 +256,15 @@ class DecisionTreeModel:
     if label_most_cnt == len(y) or len(feature_candidates)==0:
       is_leaf = True
     else:
-      ##choose feature s.t. max gain
-      fea_gains = []
-      max_fea_idx = None
-      max_gain = 0.0
-      max_boundary = 0.0
-      for i,feature in enumerate(feature_candidates):
-        fea_gain, boundary = model.gain(data, feature)
-        fea_gains.append(fea_gain)
-        if fea_gain > max_gain:
-          max_fea_idx = i
-          max_gain = fea_gain
-          max_boundary = boundary
-      ## all feature gains are the same, it's a leaf node
-      _, gain_most_cnt = collections.Counter(fea_gains).most_common(1)[0]
-      if gain_most_cnt == len(fea_gains):
-        is_leaf = True
-      else:
-        chosen_feature = feature_candidates[max_fea_idx]
+      ## choose a feature to divide data
+      is_leaf, chosen_fea_index, chosen_value, chosen_boundary = model.select_feature(data, feature_candidates)
+      if not is_leaf: 
+        chosen_feature = feature_candidates[chosen_fea_index]
         children = {}
         next_feature_candidates = [x for x in feature_candidates]
         # print(chosen_feature.feature_name)
         if chosen_feature.feature_type == self.Feature.FeatureType.DISCRETE:
-          next_feature_candidates.pop(max_fea_idx)
+          next_feature_candidates.pop(chosen_fea_index)
           for fea_value_idx in chosen_feature.index2feavalue:
             divided = data[data[:,chosen_feature.feature_index]==fea_value_idx,:]
             if len(divided) > 0:
@@ -199,9 +272,14 @@ class DecisionTreeModel:
                   divided, next_feature_candidates)
               if child != None:
                 children[chosen_feature.get_feature_value_by_index(fea_value_idx)] = child
+            ## if divided is empty, add a leaf node labeled the most label of before-divided y as a leaf child
+            ## when feature is continuous, divided data has at least 1 sample, so this situation will never occur.
+            else:
+              children[chosen_feature.get_feature_value_by_index(fea_value_idx)] = \
+                  self.__make_leaf_node__(feature_label, label_most, 0)
         elif chosen_feature.feature_type == self.Feature.FeatureType.CONTINUOUS:
-          divided_lt = data[data[:,chosen_feature.feature_index]<=max_boundary, :]
-          divided_gt = data[data[:,chosen_feature.feature_index]>max_boundary, :]
+          divided_lt = data[data[:,chosen_feature.feature_index]<=chosen_boundary, :]
+          divided_gt = data[data[:,chosen_feature.feature_index]>chosen_boundary, :]
           child_lt = self.__generate_decision_tree_recursively__(model, 
               divided_lt, next_feature_candidates)
           child_gt = self.__generate_decision_tree_recursively__(model, 
@@ -210,9 +288,9 @@ class DecisionTreeModel:
             children[True] = child_lt
           if child_gt != None:
             children[False] = child_gt
-          # print(max_boundary)
-        node = self.__make_non_leaf_node__(chosen_feature, max_gain,  
-            samples, max_boundary, children)
+          # print(chosen_boundary)
+        node = self.__make_non_leaf_node__(model, chosen_feature, chosen_value,  
+            samples, chosen_boundary, children)
     if is_leaf == True:
       node = self.__make_leaf_node__(feature_label, label_most, samples)
     return node
@@ -324,7 +402,8 @@ class DecisionTreeModel:
     color_list = self.__color_brew_from_seaborn__()
     # print(color_list)
     # dot = Digraph(comment = "Decision Tree", node_attr={"shape":"component"})
-    dot = Digraph(comment = "Decision Tree", node_attr={"shape":"box", "style":"rounded,filled"})
+    # dot = Digraph(comment = "Decision Tree", node_attr={"shape":"box", "style":"rounded,filled"})
+    dot = Digraph(comment = "Decision Tree", node_attr={"shape":"note", "style":"rounded,filled"})
     cnt = 0
     q = [(str(cnt), self.root)]
     for_show = []

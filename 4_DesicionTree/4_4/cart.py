@@ -10,12 +10,11 @@ import numpy as np
 import json
 
 if __name__ == "__main__":
-  # data = np.loadtxt(ROOT_DIR+"/../watermelon/watermelon_2.0.csv", dtype=str, delimiter=",", skiprows=0)
-  data = np.loadtxt(ROOT_DIR+"/../watermelon/watermelon_3.0.csv", dtype=str, delimiter=",", skiprows=0)
+  data = np.loadtxt(ROOT_DIR+"/../watermelon/watermelon_2.0.csv", dtype=str, delimiter=",", skiprows=0)
   data = data[:,1:]
   # print(data)
   model = DecisionTreeModel()
-  model.fit(data=data, algo_model="id3")
+  model.fit(data=data, algo_model="cart")
   # print(model.root["feature"])
   print(json.dumps(model.root, indent=4, ensure_ascii=False))
 

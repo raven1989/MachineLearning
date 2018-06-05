@@ -17,7 +17,7 @@ if __name__ == "__main__":
   model = DecisionTreeModel()
   model.fit(data=data, algo_model="id3")
   # print(model.root["feature"])
-  print(json.dumps(model.root, indent=4, ensure_ascii=False))
+  # print(json.dumps(model.root, indent=4, ensure_ascii=False))
 
   ## predict train
   x = data[1:,:-1]

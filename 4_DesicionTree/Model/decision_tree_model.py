@@ -331,8 +331,14 @@ class DecisionTreeModel:
             if child_gt != None:
               children[False] = child_gt
             # print(chosen_boundary)
-          node = self.__make_non_leaf_node__(model, chosen_feature, chosen_value,  
-              samples, chosen_boundary, children)
+          ## post-pruning
+          if self.post_pruning: 
+            b_all_children_leavies = reduce(lambda i,j:i&j, [c.get("is_leaf") for c in children.values()])
+            if b_all_children_leavies and self.__if_post_pruning__(chosen_feature, data, test_data, chosen_boundary):
+              is_leaf = True
+          if not is_leaf:
+            node = self.__make_non_leaf_node__(model, chosen_feature, chosen_value,  
+                samples, chosen_boundary, children)
     if is_leaf == True:
       node = self.__make_leaf_node__(feature_label, label_most, samples)
     return node
@@ -400,8 +406,7 @@ class DecisionTreeModel:
     acc = sum(equal)*1.0/len(equal)
     return acc
 
-  def __if_pre_pruning__(self, feature, train_data, test_data, boundary):
-    if_pruning = False
+  def __compute_accuracy_before_after_pruning__(self, feature, train_data, test_data, boundary):
     ## if not divide
     pre = train_data[:,-1]
     pre_label_cnt = collections.Counter(pre).most_common(1)
@@ -434,6 +439,17 @@ class DecisionTreeModel:
       equal.extend([1 if label==most_label_gt else 0 for label in y_gt])
     ## compute acc
     acc_after = sum(equal)*1.0/len(equal)
+    # print("feature:{} before:{} after:{}".format(feature.feature_name, acc_before, acc_after))
+    return acc_before, acc_after
+
+  ## What's different from post-pruning is that pruning is still fullfilled when acc_before equals acc_after
+  def __if_pre_pruning__(self, feature, train_data, test_data, boundary):
+    acc_before, acc_after = self.__compute_accuracy_before_after_pruning__(feature, train_data, test_data, boundary)
+    return acc_before >= acc_after
+
+  ## What's different from pre-pruning is that pruning will not be fullfilled when acc_before equals acc_after
+  def __if_post_pruning__(self, feature, train_data, test_data, boundary):
+    acc_before, acc_after = self.__compute_accuracy_before_after_pruning__(feature, train_data, test_data, boundary)
     return acc_before > acc_after
 
   def __node_str__(self, node):

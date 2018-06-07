@@ -24,10 +24,10 @@ if __name__ == "__main__":
   # dot = model.export_graphviz()
   # dot.render(view=True, cleanup=True)
 
-  ## pre_pruning
-  pre_pruning_model = DecisionTreeModel()
-  pre_pruning_model.fit(data=data, algo_model="cart", split_ratio="watermelon", prune="pre")
+  ## post_pruning
+  post_pruning_model = DecisionTreeModel()
+  post_pruning_model.fit(data=data, algo_model="cart", split_ratio="watermelon", prune="post")
 
-  pre_pruning_dot = pre_pruning_model.export_graphviz()
-  pre_pruning_dot.render(view=True, cleanup=True)
+  post_pruning_dot = post_pruning_model.export_graphviz()
+  post_pruning_dot.render(view=True, cleanup=True)
 

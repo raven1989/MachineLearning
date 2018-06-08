@@ -1,4 +1,5 @@
 import sys
+import time
 import math
 import numpy as np
 import collections
@@ -108,6 +109,8 @@ class DecisionTreeModel:
     else:
       ratio_train, ratio_test = [int(x) for x in strategy.split(":")]
       n_train = int(ratio_train*1.0/(ratio_train+ratio_test)*m)
+      ## make sure random shuffle results are all the same every time for the same dataset in order to observe the same tree
+      np.random.seed(1234)
       np.random.shuffle(self.data)
       self.test_data = self.data[n_train:, :]
       self.data = self.data[:n_train, :]
@@ -332,10 +335,8 @@ class DecisionTreeModel:
               children[False] = child_gt
             # print(chosen_boundary)
           ## post-pruning
-          if self.post_pruning: 
-            b_all_children_leavies = reduce(lambda i,j:i&j, [c.get("is_leaf") for c in children.values()])
-            if b_all_children_leavies and self.__if_post_pruning__(chosen_feature, data, test_data, chosen_boundary):
-              is_leaf = True
+          if self.post_pruning and self.__if_post_pruning__(chosen_feature, data, test_data, chosen_boundary):
+            is_leaf = True
           if not is_leaf:
             node = self.__make_non_leaf_node__(model, chosen_feature, chosen_value,  
                 samples, chosen_boundary, children)
@@ -414,7 +415,7 @@ class DecisionTreeModel:
     y = np.reshape(test_data[:,-1], -1)
     # print(most_label, y)
     equal = [1 if label==most_label else 0 for label in y]
-    acc_before = sum(equal)*1.0/len(equal)
+    acc_before = sum(equal)*1.0/len(equal) if len(equal)>0 else 0.0
     ## if divide
     equal = []
     if feature.feature_type == self.Feature.FeatureType.DISCRETE:
@@ -435,10 +436,10 @@ class DecisionTreeModel:
       pre_gt = train_data[train_data[:,feature.feature_index]>boundary, -1]
       pre_gt_label_cnt = collections.Counter(pre_gt).most_common(1)
       most_label_gt = most_label if len(pre_gt_label_cnt)<=0 else pre_gt_label_cnt[0][0]
-      y_gt = np.reshape(test_data[test_data[:,feature.feature_index]>boundary, -1])
+      y_gt = np.reshape(test_data[test_data[:,feature.feature_index]>boundary, -1], -1)
       equal.extend([1 if label==most_label_gt else 0 for label in y_gt])
     ## compute acc
-    acc_after = sum(equal)*1.0/len(equal)
+    acc_after = sum(equal)*1.0/len(equal) if len(equal)>0 else 0.0
     # print("feature:{} before:{} after:{}".format(feature.feature_name, acc_before, acc_after))
     return acc_before, acc_after
 
@@ -515,7 +516,7 @@ class DecisionTreeModel:
     color = [hex_codes[c // 16] + hex_codes[c % 16] for c in color]
     return '#' + ''.join(color)
 
-  def export_graphviz(self):
+  def export_graphviz(self, dot=None):
     if self.root == None:
       raise ValueError("DecisionTreeModel is not ready, call fit first.")
     n_features = len(self.features)
@@ -524,32 +525,34 @@ class DecisionTreeModel:
     # print(color_list)
     # dot = Digraph(comment = "Decision Tree", node_attr={"shape":"component"})
     # dot = Digraph(comment = "Decision Tree", node_attr={"shape":"box", "style":"rounded,filled"})
-    dot = Digraph(comment = "Decision Tree", node_attr={"shape":"note", "style":"rounded,filled"})
+    if dot is None:
+      dot = Digraph(comment = "Decision Tree", node_attr={"shape":"note", "style":"rounded,filled"})
+    name_prefix = str(int(time.time()*1000000))
     cnt = 0
-    q = [(str(cnt), self.root)]
+    node_name = "%s_%d" % (name_prefix, cnt)
+    q = [(node_name, self.root)]
     for_show = []
     label = self.__node_str__(self.root)
     # color = "%d,%d,%d" % tuple(color_list[self.root.get("feature_index",0)%len(color_list)])
     # color = self.__get_color__(color_list[self.root.get("feature_index",0)%len(color_list)])
     color = color_list[self.root.get("feature_index",0)%len(color_list)]
     # print(color)
-    dot.node(name=str(cnt), label=label, fillcolor=color)
-    parent_name = str(cnt)
+    dot.node(name=node_name, label=label, fillcolor=color)
+    parent_name = node_name
     cnt += 1
     while len(q) > 0:
       parent_name, parent = q.pop(0)
       children = parent.get("children")
       if children!=None and len(children)>0:
         for k,v in children.items():
-          name = str(cnt)
+          node_name = "%s_%d" % (name_prefix, cnt)
           # color = "%d,%d,%d" % tuple(color_list[v.get("feature_index",0)%len(color_list)])
           # color = self.__get_color__(color_list[v.get("feature_index",0)%len(color_list)])
           color = color_list[v.get("feature_index",0)%len(color_list)]
           # print(color)
-          dot.node(name=name, label=self.__node_str__(v), fillcolor=color)
-          dot.edge(parent_name, name, label=str(k))
+          dot.node(name=node_name, label=self.__node_str__(v), fillcolor=color)
+          dot.edge(parent_name, node_name, label=str(k))
           cnt += 1
-          q.append((name,v))
+          q.append((node_name,v))
     return dot
-
 

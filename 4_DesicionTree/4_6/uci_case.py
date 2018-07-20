@@ -21,17 +21,22 @@ if __name__ == "__main__":
 
   data = data[:,1:]
 
+  print("... no-pruning ...")
   model = DecisionTreeModel()
   model.fit(data=data, algo_model="cart", split_ratio="9:1")
   # print(model.root["feature"])
   # print(json.dumps(model.root, indent=4, ensure_ascii=False))
   dot = model.export_graphviz()
+  report = model.report_performances()
+  print(report)
 
   ## pre_pruning
   print("... pre-pruning ...")
   pre_pruning_model = DecisionTreeModel()
   pre_pruning_model.fit(data=data, algo_model="cart", split_ratio="9:1", prune="pre")
   pre_pruning_dot = pre_pruning_model.export_graphviz(dot)
+  pre_pruning_report = pre_pruning_model.report_performances()
+  print(pre_pruning_report)
 
   ## post_pruning
   print("... post-pruning ...")
@@ -39,8 +44,9 @@ if __name__ == "__main__":
   post_pruning_model.fit(data=data, algo_model="cart", split_ratio="9:1", prune="post")
   post_pruning_dot = post_pruning_model.export_graphviz(pre_pruning_dot)
   # post_pruning_dot = post_pruning_model.export_graphviz()
-
   # dot.render(view=True, cleanup=True)
   # pre_pruning_dot.render(view=True, cleanup=True)
   post_pruning_dot.render(view=True, cleanup=True)
+  post_pruning_report = post_pruning_model.report_performances()
+  print(post_pruning_report)
 

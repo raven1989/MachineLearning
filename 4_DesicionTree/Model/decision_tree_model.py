@@ -403,9 +403,22 @@ class DecisionTreeModel:
   def accuracy(self, real, prediction):
     if len(real) != len(prediction):
       raise ValueError("real has {} samples while prediction {}".format(len(real), len(prediction)))
+    # print(real)
+    # print(prediction)
     equal = [1 if eq else 0 for eq in real==prediction]
     acc = sum(equal)*1.0/len(equal)
     return acc
+
+  def report_performances(self):
+    if self.test_data is None:
+      raise ValueError("No test data found for performances evaluation.")
+    report = {}
+    x = self.test_data[:,:-1]
+    y = np.reshape(self.test_data[:,-1], -1)
+    predictions = np.reshape([self.features[-1].get_index_by_feature_value(v) for v in self.predict(x=x, mapped=True)], -1)
+    acc = self.accuracy(y, predictions)
+    report["accuracy"] = acc
+    return report
 
   def __compute_accuracy_before_after_pruning__(self, feature, train_data, test_data, boundary):
     ## if not divide

@@ -1,7 +1,7 @@
 #coding:utf-8
 import sys
 reload(sys)
-sys.setdefaultencoding('utf8')
+sys.setdefaultencoding('utf-8')
 import os
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(ROOT_DIR+"/../Model")

@@ -4,6 +4,8 @@ import hashlib
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import MinMaxScaler
 
+import json
+
 class FeatureMaker:
   '''Feature Maker Class
 
@@ -33,9 +35,12 @@ class FeatureMaker:
     self.one_hot_encoder = OneHotEncoder(categorical_features=discrete_feature_idx)
     if self.norm:
       self.min_max_scaler = MinMaxScaler()
+    self.feature2index = None
+    self.index2feature = None
   def make(self, skip_rows=0, skip_cols=0):
     raw_data = []
-    feature_map = [{} for t in self.types]
+    self.feature2index = [{} for t in self.types]
+    self.index2feature = [{} for t in self.types]
     with open(self.src) as src:
       for row,line in enumerate(src):
         # print(row, line)
@@ -45,10 +50,11 @@ class FeatureMaker:
         raw_sample = []
         for i,t in enumerate(self.types):
           if t==0:
-            value = feature_map[i].get(splitted[i])
+            value = self.feature2index[i].get(splitted[i])
             if value is None:
-              value = float(len(feature_map[i]))
-              feature_map[i][splitted[i]] = value
+              value = float(len(self.feature2index[i]))
+              self.feature2index[i][splitted[i]] = value
+              self.index2feature[i][value] = splitted[i]
           else:
             value = float(splitted[i])
           raw_sample.append(value)
@@ -67,9 +73,11 @@ if __name__ == '__main__':
   feature_types = [0,0,0,0,0,0,1,1,0]
   feature_maker = FeatureMaker(src=src, delimiter=',', types=feature_types, norm=True)
   print(feature_maker.make(skip_rows=1, skip_cols=1))
+  print(json.dumps(feature_maker.index2feature, indent=2, ensure_ascii=False))
 
   src = '../Data/watermelon/watermelon_2.0.csv'
   feature_types = [0,0,0,0,0,0,0]
   feature_maker = FeatureMaker(src=src, delimiter=',', types=feature_types, norm=True)
   print(feature_maker.make(skip_rows=1, skip_cols=1))
+  print(json.dumps(feature_maker.index2feature, indent=2, ensure_ascii=False))
 

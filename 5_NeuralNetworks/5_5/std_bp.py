@@ -18,13 +18,18 @@ X, Y = feature_maker.make(skip_rows=1, skip_cols=1)
 print("X : {}".format(X))
 print("Y : {}".format(Y))
 
-topo = [np.reshape(X[0],-1).shape[0], 10, 1]
+topo = [np.reshape(X[0],-1).shape[0], 7, 1]
 alpha = 0.01
 print("nn topo : {}".format(topo))
 network = NeuralNetwork(topo=topo, alpha=alpha).initialize()
 
-for epoch in range(100):
+for epoch in range(20):
   for x,y in zip(X,Y):
-    network.forward(X[0])
-    network.backward(Y[0])
-  print("Loss : {}".format(network.loss(X[0], Y[0])))
+    network.forward(x)
+    network.backward(y)
+    # print("b : {}".format(network.b))
+  loss = []
+  for x,y in zip(X,Y):
+    loss.append(network.loss(x, y))
+  print("Training Loss : {}".format(np.mean(loss)))
+

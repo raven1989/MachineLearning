@@ -35,7 +35,7 @@ class NeuralNetwork:
     # self.Y = [np.zeros(shape=(t,1)) for t in self.topo]
     ## backward temps
     ## eta = partial_E/partial_y * partial_y/partial_z = partial_E/partial_y * g(z) * (1-g(z))
-    self.eta = [np.zeros(shape=t.shape) for t in self.Z[1:]]
+    self.eta = [np.zeros(shape=t.shape) for t in self.Z]
     return self
   def forward(self, X):
     self.Z[0] = np.dot(self.W[0].T, np.reshape(X, (self.topo[0],1))) + self.b[0]
@@ -51,8 +51,8 @@ class NeuralNetwork:
     ## eta = partial_E/partial_y * partial_y/partial_z = partial_E/partial_y * g(z) * (1-g(z))
     self.eta[-1] = np.multiply(partial_y, self.activate_fn.derivative(self.Z[-1]))
     ## start from the last hidden layer
-    for layer in range(len(self.eta[:-1])-1, -1, -2):
-      partial_y = np.dot(self.eta[layer+1], self.W[layer+1])
+    for layer in range(len(self.eta[:-1])-1, -2, -1):
+      partial_y = np.dot(self.W[layer+1], self.eta[layer+1])
       partial_w = np.dot(self.activate_fn.output(self.Z[layer]), self.eta[layer+1].T)
       partial_b = self.eta[layer+1]
       ## update parameters 

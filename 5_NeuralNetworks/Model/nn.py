@@ -41,9 +41,7 @@ class NeuralNetwork:
     self.Z[0] = np.dot(self.W[0].T, np.reshape(X, (self.topo[0],1))) + self.b[0]
     for layer in range(1, len(self.Z)):
       self.Z[layer] = np.dot(self.W[layer].T, self.activate_fn.output(self.Z[layer-1])) + self.b[layer]
-    # self.Y[0] = np.reshape(X, (self.topo[0],1))
-    # for layer in range(1, len(self.Y)):
-      # self.Y[layer] = Sigmoid.output(np.dot(self.W[layer-1].T, self.Y[layer-1]) + self.b[layer-1])
+    # print("Z : {}".format(self.Z))
   def backward(self, Y):
     ## the partial derivative to y of the output layer is: E=1/2(y-label)^2 => partial_E/partial_y = y-label
     # partial_y = self.activate_fn.output(self.Z[-1]) - np.reshape(Y, self.Z[-1].shape)
@@ -64,6 +62,9 @@ class NeuralNetwork:
   def loss(self, X, Y):
     self.forward(X)
     return self.loss_fn.output(self.activate_fn.output(self.Z[-1]), Y)
+  def predict(self, X):
+    self.forward(X)
+    return self.activate_fn.output(self.Z[-1])
 
 if __name__ == '__main__':
   print(Sigmoid.output(0.))

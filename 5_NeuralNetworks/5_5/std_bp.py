@@ -18,12 +18,12 @@ X, Y = feature_maker.make(skip_rows=1, skip_cols=1)
 print("X : {}".format(X))
 print("Y : {}".format(Y))
 
-topo = [np.reshape(X[0],-1).shape[0], 7, 1]
-alpha = 0.01
+topo = [np.reshape(X[0],-1).shape[0], 5, 1]
+alpha = 1
 print("nn topo : {}".format(topo))
 network = NeuralNetwork(topo=topo, alpha=alpha).initialize()
 
-for epoch in range(20):
+for epoch in range(1000):
   for x,y in zip(X,Y):
     network.forward(x)
     network.backward(y)
@@ -32,4 +32,9 @@ for epoch in range(20):
   for x,y in zip(X,Y):
     loss.append(network.loss(x, y))
   print("Training Loss : {}".format(np.mean(loss)))
+
+pre = []
+for x in X:
+  pre.append(network.predict(x))
+print("Predict : {}".format(np.reshape(pre, Y.shape)))
 

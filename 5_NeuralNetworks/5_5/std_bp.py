@@ -13,7 +13,7 @@ import numpy as np
 
 src = ROOT_DIR+'/../../Data/watermelon/watermelon_3.0.csv'
 feature_types = [0,0,0,0,0,0,1,1,0]
-feature_maker = FeatureMaker(src=src, delimiter=',', types=feature_types, norm=False)
+feature_maker = FeatureMaker(src=src, delimiter=',', types=feature_types, norm=True)
 X, Y = feature_maker.make(skip_rows=1, skip_cols=1)
 print("X : {}".format(X))
 print("Y : {}".format(Y))
@@ -23,18 +23,19 @@ alpha = 1
 print("nn topo : {}".format(topo))
 network = NeuralNetwork(topo=topo, alpha=alpha).initialize()
 
-for epoch in range(1000):
+for epoch in range(100000):
   for x,y in zip(X,Y):
     network.forward(x)
     network.backward(y)
-    # print("b : {}".format(network.b))
-  loss = []
-  for x,y in zip(X,Y):
-    loss.append(network.loss(x, y))
-  print("Training Loss : {}".format(np.mean(loss)))
+  if epoch % 1000 == 0:
+    loss = []
+    for x,y in zip(X,Y):
+      loss.append(network.loss(x, y))
+    print("Epoch:{} Training Loss:{}".format(epoch, np.mean(loss)))
 
 pre = []
 for x in X:
   pre.append(network.predict(x))
-print("Predict : {}".format(np.reshape(pre, Y.shape)))
+pre = (np.reshape(pre, Y.shape)>0.5).astype(int)
+print("Predict : {}".format(pre))
 

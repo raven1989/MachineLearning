@@ -25,17 +25,19 @@ network = NeuralNetwork(topo=topo, alpha=alpha).initialize()
 
 for epoch in range(100000):
   for x,y in zip(X,Y):
-    network.forward(x)
-    network.backward(y)
+    network.forward(np.reshape(x, newshape=(1,x.shape[0])))
+    network.backward(np.reshape(y, newshape=(1,y.shape[0])))
   if epoch % 1000 == 0:
-    loss = []
-    for x,y in zip(X,Y):
-      loss.append(network.loss(x, y))
+    # loss = []
+    # for x,y in zip(X,Y):
+    #   loss.append(network.loss(x, y))
+    loss = network.loss(X, Y)
     print("Epoch:{} Training Loss:{}".format(epoch, np.mean(loss)))
 
-pre = []
-for x in X:
-  pre.append(network.predict(x))
-pre = (np.reshape(pre, Y.shape)>0.5).astype(int)
+# pre = []
+# for x in X:
+#   pre.append(network.predict(x))
+# pre = (np.reshape(pre, Y.shape)>0.5).astype(int)
+pre = (network.predict(X)>0.5).astype(float)
 print("Predict : {}".format(pre))
 

@@ -8,6 +8,7 @@ sys.path.append(ROOT_DIR+"/../Model")
 sys.path.append(ROOT_DIR+"/../../0_FeatureMaker")
 from feature_maker import FeatureMaker
 from nn import NeuralNetwork
+from nn import L2Regularization
 import numpy as np
 
 
@@ -15,29 +16,37 @@ src = ROOT_DIR+'/../../Data/watermelon/watermelon_3.0.csv'
 feature_types = [0,0,0,0,0,0,1,1,0]
 feature_maker = FeatureMaker(src=src, delimiter=',', types=feature_types, norm=True)
 X, Y = feature_maker.make(skip_rows=1, skip_cols=1)
-print("X : {}".format(X))
-print("Y : {}".format(Y))
+# print("X : {}".format(X))
+# print("Y : {}".format(Y))
+
+train_X, test_X, train_Y, test_Y = feature_maker.train_test_split(X, Y, test_size=3, random_state=1234)
+print("Train X : {}".format(train_X))
+print("Train Y : {}".format(train_Y))
+print("Test X : {}".format(test_X))
+print("Test Y : {}".format(test_Y))
 
 topo = [np.reshape(X[0],-1).shape[0], 5, 1]
 alpha = 1
+lambdaa = 0.0001
 print("nn topo : {}".format(topo))
-network = NeuralNetwork(topo=topo, alpha=alpha).initialize()
+network = NeuralNetwork(topo=topo, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
 
 for epoch in range(100000):
-  for x,y in zip(X,Y):
+  for x,y in zip(train_X,train_Y):
     network.forward(np.reshape(x, newshape=(1,x.shape[0])))
     network.backward(np.reshape(y, newshape=(1,y.shape[0])))
   if epoch % 1000 == 0:
     # loss = []
     # for x,y in zip(X,Y):
     #   loss.append(network.loss(x, y))
-    loss = network.loss(X, Y)
-    print("Epoch:{} Training Loss:{}".format(epoch, np.mean(loss)))
+    train_loss = np.mean(network.loss(train_X, train_Y))
+    test_loss = np.mean(network.loss(test_X, test_Y))
+    print("Epoch:{} Training Loss:{} Test Loss:{}".format(epoch, train_loss, test_loss))
 
 # pre = []
 # for x in X:
 #   pre.append(network.predict(x))
 # pre = (np.reshape(pre, Y.shape)>0.5).astype(int)
-pre = (network.predict(X)>0.5).astype(float)
+pre = (network.predict(test_X)>0.5).astype(float)
 print("Predict : {}".format(pre))
 

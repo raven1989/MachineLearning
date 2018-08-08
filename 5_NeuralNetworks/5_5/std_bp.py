@@ -19,7 +19,7 @@ X, Y = feature_maker.make(skip_rows=1, skip_cols=1)
 # print("X : {}".format(X))
 # print("Y : {}".format(Y))
 
-train_X, test_X, train_Y, test_Y = feature_maker.train_test_split(X, Y, test_size=3, random_state=1234)
+train_X, test_X, train_Y, test_Y = feature_maker.train_test_split(X, Y, test_size=5, random_state=1234)
 print("Train X : {}".format(train_X))
 print("Train Y : {}".format(train_Y))
 print("Test X : {}".format(test_X))
@@ -27,15 +27,15 @@ print("Test Y : {}".format(test_Y))
 
 topo = [np.reshape(X[0],-1).shape[0], 5, 1]
 alpha = 1
-lambdaa = 0.0001
+lambdaa = 0.00001
 print("nn topo : {}".format(topo))
 network = NeuralNetwork(topo=topo, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
 
-for epoch in range(100000):
+for epoch in range(1000):
   for x,y in zip(train_X,train_Y):
     network.forward(np.reshape(x, newshape=(1,x.shape[0])))
     network.backward(np.reshape(y, newshape=(1,y.shape[0])))
-  if epoch % 1000 == 0:
+  if epoch % 100 == 0:
     # loss = []
     # for x,y in zip(X,Y):
     #   loss.append(network.loss(x, y))

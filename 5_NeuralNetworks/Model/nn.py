@@ -57,8 +57,8 @@ class NeuralNetwork:
     if len(self.topo)<2:
       raise ValueError("NeuralNetwork.topo must have 2 levels at least.")
     ## parameters
-    self.W = [np.random.normal(0, 1e-3, size=self.topo[i-1:i+1]) for i in range(1, len(self.topo))]
-    self.b = [np.random.normal(0, 1e-3, size=(1,self.topo[i])) for i in range(1, len(self.topo))]
+    self.W = [np.random.normal(0, 1, size=self.topo[i-1:i+1]) for i in range(1, len(self.topo))]
+    self.b = [np.random.normal(0, 1, size=(1,self.topo[i])) for i in range(1, len(self.topo))]
     ## forward temps
     self.Z = [np.zeros(shape=(t,1)) for t in self.topo]
     # self.Y = [np.zeros(shape=(t,1)) for t in self.topo]
@@ -102,7 +102,7 @@ class NeuralNetwork:
       self.b[layer] -= self.alpha * partial_b
   def loss(self, X, Y):
     self.forward(X)
-    return self.loss_fn.output(self.activate_fn.output(self.Z[-1]), Y) + self.regularization.output(*(self.W+self.b))
+    return (1.0-self.lambdaa)*self.loss_fn.output(self.activate_fn.output(self.Z[-1]), Y) + self.lambdaa*self.regularization.output(*(self.W+self.b))
   def predict(self, X):
     self.forward(X)
     return self.activate_fn.output(self.Z[-1])

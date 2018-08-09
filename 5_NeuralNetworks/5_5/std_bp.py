@@ -6,10 +6,10 @@ import os
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(ROOT_DIR+"/../Model")
 sys.path.append(ROOT_DIR+"/../../0_FeatureMaker")
+import numpy as np
 from feature_maker import FeatureMaker
 from nn import NeuralNetwork
-from nn import L2Regularization
-import numpy as np
+from regularizor import L2Regularization
 
 
 src = ROOT_DIR+'/../../Data/watermelon/watermelon_3.0.csv'

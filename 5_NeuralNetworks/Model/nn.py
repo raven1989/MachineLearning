@@ -1,66 +1,9 @@
 import sys
 import numpy as np
-
-class Sigmoid:
-  @staticmethod
-  def output(z):
-    return 1.0/(1.0+np.exp(-1.0*z))
-  @staticmethod
-  def derivative(z):
-    return Sigmoid.output(z)*(1.0-Sigmoid.output(z))
-
-#acumulated square loss
-class LeastSqureLoss:
-  ## y.shape should be m x N where m is num of samples
-  @staticmethod
-  def output(y, label):
-    shape = y.shape
-    if len(shape)<2:
-      shape = (1,shape[0])
-    m, n = shape
-    dist = np.reshape(y,shape) - np.reshape(label,shape)
-    return np.mean(np.sum(0.5*np.square(dist), axis=1))
-  @staticmethod
-  def derivative(y, label):
-    shape = y.shape
-    if len(shape)<2:
-      shape = (1,shape[0])
-    m, n = shape
-    return 1.0/m * (np.reshape(y,shape)-np.reshape(label,shape))
-
-class Regularization:
-  @staticmethod
-  def output(*args):
-    return 0
-  @staticmethod
-  def derivative(p):
-    return 0
-
-class L2Regularization(Regularization):
-  @staticmethod
-  def output(*args):
-    l2 = np.sum([np.square(np.linalg.norm(np.reshape(p, -1))) for p in args])
-    return l2
-  @staticmethod
-  def derivative(p):
-    return p
-
-class LearningRate(object):
-  def __init__(self, learning_rate):
-    self.learning_rate = learning_rate
-  def delta(self, derivatives):
-    return [self.learning_rate*d for d in derivatives]
-
-class MomentumLearningRate(LearningRate):
-  def __init__(self, learning_rate, beta):
-    super(MomentumLearningRate, self).__init__(learning_rate)
-    self.beta = beta
-    self.v = None
-  def delta(self, derivatives):
-    if self.v is None:
-      self.v = [np.zeros(d.shape) for d in derivatives]
-    self.v = [self.beta*self.v[i] + self.learning_rate*derivatives[i] for i in range(len(derivatives))]
-    return self.v
+from activate_fn import *
+from loss import *
+from learning_rate import *
+from regularizor import *
 
 class NeuralNetwork:
   def __init__(self, topo, alpha, learning_rate=None, activate_fn=Sigmoid, loss_fn=LeastSqureLoss, lambdaa=0.0, regularization=Regularization):
@@ -137,6 +80,3 @@ class NeuralNetwork:
     p = self.predict(X)
     return np.mean((np.mean(np.equal(p,Y), axis=1)==1).astype(float))
 
-if __name__ == '__main__':
-  print(Sigmoid.output(0.))
-  print(Sigmoid.derivative(0.))

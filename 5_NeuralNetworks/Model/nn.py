@@ -36,7 +36,7 @@ class Regularization:
   def derivative(p):
     return 0
 
-class L2Regularization:
+class L2Regularization(Regularization):
   @staticmethod
   def output(*args):
     l2 = np.sum([np.square(np.linalg.norm(np.reshape(p, -1))) for p in args])
@@ -45,10 +45,28 @@ class L2Regularization:
   def derivative(p):
     return p
 
+class LearningRate(object):
+  def __init__(self, learning_rate):
+    self.learning_rate = learning_rate
+  def delta(self, derivatives):
+    return [self.learning_rate*d for d in derivatives]
+
+class MomentumLearningRate(LearningRate):
+  def __init__(self, learning_rate, beta):
+    super(MomentumLearningRate, self).__init__(learning_rate)
+    self.beta = beta
+    self.v = None
+  def delta(self, derivatives):
+    if self.v is None:
+      self.v = [np.zeros(d.shape) for d in derivatives]
+    self.v = [self.beta*self.v[i] + self.learning_rate*derivatives[i] for i in range(len(derivatives))]
+    return self.v
+
 class NeuralNetwork:
-  def __init__(self, topo, alpha, activate_fn=Sigmoid, loss_fn=LeastSqureLoss, lambdaa=0.0, regularization=Regularization):
+  def __init__(self, topo, alpha, learning_rate=None, activate_fn=Sigmoid, loss_fn=LeastSqureLoss, lambdaa=0.0, regularization=Regularization):
     self.topo = topo
     self.alpha = alpha
+    self.learning_rate = LearningRate(alpha) if learning_rate is None else learning_rate
     self.lambdaa = lambdaa
     self.activate_fn = activate_fn
     self.loss_fn = loss_fn
@@ -59,6 +77,9 @@ class NeuralNetwork:
     ## parameters
     self.W = [np.random.normal(0, 1, size=self.topo[i-1:i+1]) for i in range(1, len(self.topo))]
     self.b = [np.random.normal(0, 1, size=(1,self.topo[i])) for i in range(1, len(self.topo))]
+    ## parameters derivatives
+    self.D_W = [np.zeros(shape=(w.shape)) for w in self.W]
+    self.D_b = [np.zeros(shape=(b.shape)) for b in self.b]
     ## forward temps
     self.Z = [np.zeros(shape=(t,1)) for t in self.topo]
     # self.Y = [np.zeros(shape=(t,1)) for t in self.topo]
@@ -97,9 +118,15 @@ class NeuralNetwork:
       if layer>0:
         partial_y = np.dot(self.eta[layer], self.W[layer].T)
         self.eta[layer-1] = np.multiply(partial_y, self.activate_fn.derivative(self.Z[layer]))
-      ## update parameters 
-      self.W[layer] -= self.alpha * partial_w
-      self.b[layer] -= self.alpha * partial_b
+      ## parameters derivatives
+      self.D_W[layer] = partial_w
+      self.D_b[layer] = partial_b
+    ## update parameters 
+    delta = self.learning_rate.delta(self.D_W+self.D_b)
+    delta_W = delta[:len(self.D_W)]
+    delta_b = delta[len(self.D_W):]
+    self.W = [self.W[i]-delta_W[i] for i in range(len(self.W))]
+    self.b = [self.b[i]-delta_b[i] for i in range(len(self.b))]
   def loss(self, X, Y):
     self.forward(X)
     return (1.0-self.lambdaa)*self.loss_fn.output(self.activate_fn.output(self.Z[-1]), Y) + self.lambdaa*self.regularization.output(*(self.W+self.b))

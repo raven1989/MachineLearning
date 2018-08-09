@@ -9,6 +9,7 @@ sys.path.append(ROOT_DIR+"/../../0_FeatureMaker")
 from feature_maker import FeatureMaker
 from nn import NeuralNetwork
 from nn import L2Regularization
+from nn import MomentumLearningRate
 import numpy as np
 
 
@@ -32,16 +33,25 @@ topo = [N_input, 6, N_output]
 alpha = 1
 lambdaa = 0.0001
 print("nn topo : {}".format(topo))
-network = NeuralNetwork(topo=topo, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
 
-for epoch in range(20000):
+## Momentum
+learning_rate = MomentumLearningRate(learning_rate=alpha, beta=0.9)
+
+network = NeuralNetwork(topo=topo, alpha=alpha, learning_rate=learning_rate, lambdaa=lambdaa, regularization=L2Regularization).initialize()
+
+for epoch in range(5000):
   network.forward(train_X)
   network.backward(train_Y)
-  if epoch % 1000 == 0:
+  if epoch % 100 == 0:
     train_loss = np.mean(network.loss(train_X, train_Y))
     test_loss = np.mean(network.loss(test_X, test_Y))
     test_acc = network.accuracy(test_X, test_Y)
     print("Epoch:{} Training Loss:{} Test Loss:{} Test Acc:{}".format(epoch, train_loss, test_loss, test_acc))
+## final
+train_loss = np.mean(network.loss(train_X, train_Y))
+test_loss = np.mean(network.loss(test_X, test_Y))
+test_acc = network.accuracy(test_X, test_Y)
+print("Epoch:{} Training Loss:{} Test Loss:{} Test Acc:{}".format("Final", train_loss, test_loss, test_acc))
 
 # pre = (network.predict(test_X)>0.5).astype(float)
 pre = network.predict(test_X)

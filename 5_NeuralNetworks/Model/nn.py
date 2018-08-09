@@ -108,7 +108,7 @@ class NeuralNetwork:
     return (self.activate_fn.output(self.Z[-1])>0.5).astype(float)
   def accuracy(self, X, Y):
     p = self.predict(X)
-    return np.mean(np.mean(np.equal(p,Y), axis=1)==1)
+    return np.mean((np.mean(np.equal(p,Y), axis=1)==1).astype(float))
 
 if __name__ == '__main__':
   print(Sigmoid.output(0.))

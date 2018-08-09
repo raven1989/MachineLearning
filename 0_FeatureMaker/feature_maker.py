@@ -34,7 +34,8 @@ class FeatureMaker:
     self.norm = norm
     ## exclude last col which is y
     discrete_feature_idx = filter(lambda i:self.types[i]==0, range(len(self.types)-1))
-    self.one_hot_encoder = OneHotEncoder(categorical_features=discrete_feature_idx)
+    self.one_hot_encoder = OneHotEncoder(categorical_features=discrete_feature_idx, sparse=False)
+    self.label_one_hot_encoder = None
     if self.norm:
       self.min_max_scaler = MinMaxScaler()
     self.feature2index = None
@@ -65,9 +66,13 @@ class FeatureMaker:
     x = raw_data[:,:-1]
     y = raw_data[:,-1:]
     # print(raw_data)
-    x = self.one_hot_encoder.fit_transform(X=x, y=y).toarray()
+    x = self.one_hot_encoder.fit_transform(X=x, y=y)#.toarray()
     if self.norm:
       x = self.min_max_scaler.fit_transform(X=x, y=y)
+    ## one-hot encoding y if needed
+    if len(self.feature2index[-1])>2:
+      self.label_one_hot_encoder = OneHotEncoder(categorical_features=[0], sparse=False)
+      y = self.label_one_hot_encoder.fit_transform(X=y)
     return x, y
   def shuffle(self, x, y):
     return shuffle(x, y)

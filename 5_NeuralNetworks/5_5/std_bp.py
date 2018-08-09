@@ -41,12 +41,10 @@ for epoch in range(1000):
     #   loss.append(network.loss(x, y))
     train_loss = np.mean(network.loss(train_X, train_Y))
     test_loss = np.mean(network.loss(test_X, test_Y))
-    print("Epoch:{} Training Loss:{} Test Loss:{}".format(epoch, train_loss, test_loss))
+    test_acc = network.accuracy(test_X, test_Y)
+    print("Epoch:{} Training Loss:{} Test Loss:{} Test Acc:{}".format(epoch, train_loss, test_loss, test_acc))
 
-# pre = []
-# for x in X:
-#   pre.append(network.predict(x))
-# pre = (np.reshape(pre, Y.shape)>0.5).astype(int)
-pre = (network.predict(test_X)>0.5).astype(float)
+# pre = (network.predict(test_X)>0.5).astype(float)
+pre = network.predict(test_X)
 print("Predict : {}".format(pre))
 

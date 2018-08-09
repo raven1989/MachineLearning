@@ -12,8 +12,8 @@ from nn import L2Regularization
 import numpy as np
 
 
-src = ROOT_DIR+'/../../Data/iris/iris_data.csv'
-feature_types = [1,1,1,1,0]
+src = ROOT_DIR+'/../../Data/car/car_data.csv'
+feature_types = [0,0,0,0,0,0,0]
 feature_maker = FeatureMaker(src=src, delimiter=',', types=feature_types, norm=True)
 X, Y = feature_maker.make(skip_rows=1, skip_cols=1)
 # print("X : {}".format(X))
@@ -34,10 +34,10 @@ lambdaa = 0.0001
 print("nn topo : {}".format(topo))
 network = NeuralNetwork(topo=topo, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
 
-for epoch in range(20000):
+for epoch in range(27000):
   network.forward(train_X)
   network.backward(train_Y)
-  if epoch % 1000 == 0:
+  if epoch % 100 == 0:
     train_loss = np.mean(network.loss(train_X, train_Y))
     test_loss = np.mean(network.loss(test_X, test_Y))
     test_acc = network.accuracy(test_X, test_Y)

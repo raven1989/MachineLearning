@@ -12,7 +12,8 @@ class MomentumLearningRate(LearningRate):
     super(MomentumLearningRate, self).__init__(learning_rate)
     self.beta = beta
     self.v = None
-  def delta(self, derivatives):
+  def delta(self, **kwargs):
+    derivatives = kwargs['derivatives']
     if self.v is None:
       self.v = [np.zeros(d.shape) for d in derivatives]
     self.v = [self.beta*self.v[i] + self.learning_rate*derivatives[i] for i in range(len(derivatives))]

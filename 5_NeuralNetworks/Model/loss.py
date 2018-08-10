@@ -5,7 +5,9 @@ import numpy as np
 class LeastSqureLoss:
   ## y.shape should be m x N where m is num of samples
   @staticmethod
-  def output(y, label):
+  def output(**kwargs):
+    y = kwargs['y']
+    label = kwargs['label']
     shape = y.shape
     if len(shape)<2:
       shape = (1,shape[0])
@@ -13,7 +15,9 @@ class LeastSqureLoss:
     dist = np.reshape(y,shape) - np.reshape(label,shape)
     return np.mean(np.sum(0.5*np.square(dist), axis=1))
   @staticmethod
-  def derivative(y, label):
+  def derivative(**kwargs):
+    y = kwargs['y']
+    label = kwargs['label']
     shape = y.shape
     if len(shape)<2:
       shape = (1,shape[0])

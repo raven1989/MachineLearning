@@ -40,42 +40,42 @@ class NeuralNetwork:
       if layer==1:
         self.Z[layer] = np.dot(self.Z[layer-1], self.W[layer-1]) + self.b[layer-1]
       else:
-        self.Z[layer] = np.dot(self.activate_fn.output(self.Z[layer-1]), self.W[layer-1]) + self.b[layer-1]
+        self.Z[layer] = np.dot(self.activate_fn.output(z=self.Z[layer-1]), self.W[layer-1]) + self.b[layer-1]
       # print("W layer {} : {}".format(layer-1, self.W[layer-1].shape))
       # print("b layer {} : {}".format(layer-1, self.b[layer-1].shape))
       # print("Z layer {} : {}".format(layer, self.Z[layer].shape))
   def backward(self, Y):
     ## the partial derivative to y of the output layer is: E=1/2(y-label)^2 => partial_E/partial_y = y-label
     # partial_y = self.activate_fn.output(self.Z[-1]) - np.reshape(Y, self.Z[-1].shape)
-    partial_y = (1-self.lambdaa) * self.loss_fn.derivative(self.activate_fn.output(self.Z[-1]), Y)
+    partial_y = (1-self.lambdaa) * self.loss_fn.derivative(y=self.activate_fn.output(z=self.Z[-1]), label=Y)
     ## eta = partial_E/partial_y * partial_y/partial_z = partial_E/partial_y * g(z) * (1-g(z))
-    self.eta[-1] = np.multiply(partial_y, self.activate_fn.derivative(self.Z[-1]))
+    self.eta[-1] = np.multiply(partial_y, self.activate_fn.derivative(z=self.Z[-1]))
     ## start from the last layer
     for layer in range(len(self.eta)-1, -1, -1):
       # print("Layer: {}".format(layer))
-      partial_reg_w = self.regularization.derivative(self.W[layer])
-      partial_reg_b = self.regularization.derivative(self.b[layer])
-      partial_w = (1-self.lambdaa)*np.dot(self.activate_fn.output(self.Z[layer]).T, self.eta[layer]) + self.lambdaa*partial_reg_w
+      partial_reg_w = self.regularization.derivative(params=self.W[layer])
+      partial_reg_b = self.regularization.derivative(params=self.b[layer])
+      partial_w = (1-self.lambdaa)*np.dot(self.activate_fn.output(z=self.Z[layer]).T, self.eta[layer]) + self.lambdaa*partial_reg_w
       partial_b = (1-self.lambdaa)*np.sum(self.eta[layer], axis=0) + self.lambdaa*partial_reg_b
       ## update eta for next layer of backward propagation 
       if layer>0:
         partial_y = np.dot(self.eta[layer], self.W[layer].T)
-        self.eta[layer-1] = np.multiply(partial_y, self.activate_fn.derivative(self.Z[layer]))
+        self.eta[layer-1] = np.multiply(partial_y, self.activate_fn.derivative(z=self.Z[layer]))
       ## parameters derivatives
       self.D_W[layer] = partial_w
       self.D_b[layer] = partial_b
     ## update parameters 
-    delta = self.learning_rate.delta(self.D_W+self.D_b)
+    delta = self.learning_rate.delta(derivatives=self.D_W+self.D_b)
     delta_W = delta[:len(self.D_W)]
     delta_b = delta[len(self.D_W):]
     self.W = [self.W[i]-delta_W[i] for i in range(len(self.W))]
     self.b = [self.b[i]-delta_b[i] for i in range(len(self.b))]
   def loss(self, X, Y):
     self.forward(X)
-    return (1.0-self.lambdaa)*self.loss_fn.output(self.activate_fn.output(self.Z[-1]), Y) + self.lambdaa*self.regularization.output(*(self.W+self.b))
+    return (1.0-self.lambdaa)*self.loss_fn.output(y=self.activate_fn.output(z=self.Z[-1]), label=Y) + self.lambdaa*self.regularization.output(params=self.W+self.b)
   def predict(self, X):
     self.forward(X)
-    return (self.activate_fn.output(self.Z[-1])>0.5).astype(float)
+    return (self.activate_fn.output(z=self.Z[-1])>0.5).astype(float)
   def accuracy(self, X, Y):
     p = self.predict(X)
     return np.mean((np.mean(np.equal(p,Y), axis=1)==1).astype(float))

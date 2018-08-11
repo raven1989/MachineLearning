@@ -47,7 +47,7 @@ class NeuralNetwork:
   def backward(self, Y):
     ## the partial derivative to y of the output layer is: E=1/2(y-label)^2 => partial_E/partial_y = y-label
     # partial_y = self.activate_fn.output(self.Z[-1]) - np.reshape(Y, self.Z[-1].shape)
-    partial_y = (1-self.lambdaa) * self.loss_fn.derivative(y=self.activate_fn.output(z=self.Z[-1]), label=Y)
+    partial_y = self.loss_fn.derivative(y=self.activate_fn.output(z=self.Z[-1]), label=Y)
     ## eta = partial_E/partial_y * partial_y/partial_z = partial_E/partial_y * g(z) * (1-g(z))
     self.eta[-1] = np.multiply(partial_y, self.activate_fn.derivative(z=self.Z[-1]))
     ## start from the last layer

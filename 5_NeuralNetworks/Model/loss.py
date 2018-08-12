@@ -15,12 +15,13 @@ class LeastSqureLoss:
     dist = np.reshape(y,shape) - np.reshape(label,shape)
     return np.mean(np.sum(0.5*np.square(dist), axis=1))
   @staticmethod
+  ## return (feature_num, m)
   def derivative(**kwargs):
     y = kwargs['y']
     label = kwargs['label']
     shape = y.shape
     if len(shape)<2:
-      shape = (1,shape[0])
+      shape = (shape[0],1)
     m, n = shape
     return 1.0/m * (np.reshape(y,shape)-np.reshape(label,shape))
 

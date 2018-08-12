@@ -21,6 +21,8 @@ class RadialBasisFn:
     xx = np.reshape(x, (1,x.shape[0],x.shape[1]))
     c = kwargs['c']
     beta = kwargs['beta']
+    # print("xx.shape:{} c.shape:{} beta.shape:{}".format(xx.shape, c.shape, beta.shape))
+    # print("rdf output exp's index:{}".format(-1.0*beta*np.square(np.linalg.norm(xx-c, axis=2))))
     return np.exp(-1.0*beta*np.square(np.linalg.norm(xx-c, axis=2)))
   ## derivative respect to x
   @staticmethod

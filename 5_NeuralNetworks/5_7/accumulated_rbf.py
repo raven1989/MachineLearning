@@ -20,25 +20,30 @@ X, Y = feature_maker.make(skip_rows=1, skip_cols=1)
 # print("Y : {}".format(Y))
 
 train_X, test_X, train_Y, test_Y = feature_maker.train_test_split(X, Y, test_size=0, random_state=1234)
-print("Train X : {}".format(train_X))
-print("Train Y : {}".format(train_Y))
 # print("Test X : {}".format(test_X))
 # print("Test Y : {}".format(test_Y))
 
-topo = [np.reshape(X[0],-1).shape[0], 5, 1]
-alpha = 1
+train_X = np.reshape([[0,0],[0,1],[1,0],[1,1]], (-1,2))
+train_Y = np.reshape([0,1,1,0], (-1,1))
+print("Train X : {}".format(train_X))
+print("Train Y : {}".format(train_Y))
+
+N_input = np.reshape(X[0],-1).shape[0]
+N_output = np.reshape(Y[0],-1).shape[0]
+topo = [N_input, 20, N_output]
+alpha = 0.1
 lambdaa = 0.
 print("nn topo : {}".format(topo))
 network = RBFNetwork(topo=topo, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
 
-for epoch in range(200):
+for epoch in range(500):
   network.forward(train_X)
   network.backward(train_Y)
   if epoch % 10 == 0:
     train_loss = np.mean(network.loss(train_X, train_Y))
     # print("Epoch:{} Training Loss:{}".format(epoch, train_loss))
-    # test_loss = np.mean(network.loss(test_X, test_Y))
-    # test_acc = network.accuracy(test_X, test_Y)
+    # # test_loss = np.mean(network.loss(test_X, test_Y))
+    # # test_acc = network.accuracy(test_X, test_Y)
     train_acc = network.accuracy(train_X, train_Y)
     print("Epoch:{} Training Loss:{} Train Acc:{}".format(epoch, train_loss, train_acc))
 

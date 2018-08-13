@@ -28,22 +28,22 @@ train_Y = np.reshape([0,1,1,0], (-1,1))
 print("Train X : {}".format(train_X))
 print("Train Y : {}".format(train_Y))
 
-N_input = np.reshape(X[0],-1).shape[0]
-N_output = np.reshape(Y[0],-1).shape[0]
+N_input = np.reshape(train_X[0],-1).shape[0]
+N_output = np.reshape(train_Y[0],-1).shape[0]
 topo = [N_input, 20, N_output]
-alpha = 0.1
+alpha = 1
 lambdaa = 0.
 print("nn topo : {}".format(topo))
 network = RBFNetwork(topo=topo, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
 
-for epoch in range(500):
+for epoch in range(1000):
   network.forward(train_X)
   network.backward(train_Y)
   if epoch % 10 == 0:
     train_loss = np.mean(network.loss(train_X, train_Y))
     # print("Epoch:{} Training Loss:{}".format(epoch, train_loss))
-    # # test_loss = np.mean(network.loss(test_X, test_Y))
-    # # test_acc = network.accuracy(test_X, test_Y)
+    # # # test_loss = np.mean(network.loss(test_X, test_Y))
+    # # # test_acc = network.accuracy(test_X, test_Y)
     train_acc = network.accuracy(train_X, train_Y)
     print("Epoch:{} Training Loss:{} Train Acc:{}".format(epoch, train_loss, train_acc))
 

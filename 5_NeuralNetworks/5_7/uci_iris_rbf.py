@@ -28,7 +28,7 @@ print("Test Y : {}\n...".format(test_Y[:5,:]))
 N_input = np.reshape(X[0],-1).shape[0]
 N_output = np.reshape(Y[0],-1).shape[0]
 topo = [N_input, 20, N_output]
-alpha = 1
+alpha = 0.1
 lambdaa = 0.0
 print("nn topo : {}".format(topo))
 

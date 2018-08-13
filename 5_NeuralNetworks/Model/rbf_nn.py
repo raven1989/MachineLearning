@@ -22,14 +22,16 @@ class RBFNetwork:
       raise ValueError("NeuralNetwork.topo must have 2 levels at least.")
     ### parameters
     ## beta.shape is (N_i, 1)
-    self.beta = [np.random.normal(0, 1e-1, size=(self.topo[i],1)) for i in range(1, 1+len(self.topo[1:-1]))]
-    ## c.shape is (N_i-1, 1)
-    self.C = [np.random.normal(0, 1e-1, size=(self.topo[i-1],self.topo[i])) for i in range(1, 1+len(self.topo[1:-1]))]
+    self.beta = [np.random.normal(0, 1e-3, size=(self.topo[i],1)) for i in range(1, 1+len(self.topo[1:-1]))]
+    ## c.shape is (N_i-1, N_i)
+    self.C = [np.random.normal(0, 1e-3, size=(self.topo[i-1],self.topo[i])) for i in range(1, 1+len(self.topo[1:-1]))]
+    # print("C.shape:{}".format([c.shape for c in self.C]))
     ## only last layer is linerly connected
-    self.W = np.random.normal(0, 1e-1, size=self.topo[-2:])
+    self.W = np.random.normal(0, 1e-3, size=self.topo[-2:])
     ### parameters derivatives
     self.D_beta = [np.zeros(shape=(beta.shape)) for beta in self.beta]
     self.D_W = np.zeros(shape=(self.W.shape))
+    self.D_C = [np.zeros(shape=(c.shape)) for c in self.C]
     ## forward temps: z.shape is (N_layer_i, sample_num)
     self.Z = [np.zeros(shape=(t,1)) for t in self.topo]
     ## backward temps
@@ -57,9 +59,10 @@ class RBFNetwork:
 
   def backward(self, Y):
     ## the partial derivative to y of the output layer is (N_last, m) 
-    partial_y = self.loss_fn.derivative(y=self.Z[-1], label=Y)
+    partial_y = self.loss_fn.derivative(y=self.Z[-1].T, label=Y)
+    # print("backward self.Z[-1].shape:{} Y.shape:{} partial_y.shape:{}".format(self.Z[-1].T.shape, Y.shape, partial_y.shape))
     ## eta = partial_E/partial_y_last
-    self.eta[-1] = partial_y
+    self.eta[-1] = partial_y.T
     ## output layer partial_W, should be (N_i-1, N_i)
     partial_reg_w = self.regularization.derivative(params=self.W)
     partial_w = (1.0-self.lambdaa)*np.dot(self.Z[-2], self.eta[-1].T) + self.lambdaa*partial_reg_w
@@ -67,17 +70,28 @@ class RBFNetwork:
     self.eta[-2] = np.dot(self.W, self.eta[-1])
     ## start from the last hidden layer
     for layer in range(len(self.eta)-1, 0, -1):
-      # print("backward Layer: {}".format(layer))
+      # print("backward Layer:{} eta[{}].shape:{}".format(layer, layer-1, self.eta[layer-1].shape))
       partial_reg_beta = self.regularization.derivative(params=self.beta[layer-1])
       partial_beta = np.multiply(self.eta[layer-1], 
                                  self.activate_fn.derivative_beta(x=self.Z[layer-1].T, c=self.C[layer-1], beta=self.beta[layer-1]).T)
-      # print("in backward, partial_beta.shape:{}".format(partial_beta.shape))
       ## sum along with sample num, return (N_layer_i, 1)
       partial_beta = np.reshape(np.sum(partial_beta, axis=1), (-1,1))
       # print("in backward, partial_beta:{}".format(partial_beta))
       partial_beta = (1.0-self.lambdaa)*partial_beta + self.lambdaa*partial_reg_beta
       ## parameters derivatives
       self.D_beta[layer-1] = partial_beta
+      ## compute partial_c
+      partial_reg_c = self.regularization.derivative(params=self.C[layer-1])
+      cur_layer_partial_c = self.activate_fn.derivative_x(x=self.Z[layer-1].T, c=self.C[layer-1], beta=self.beta[layer-1])
+      m, N_layer_cur, N_layer_before = cur_layer_partial_c.shape
+      ## set eta (m, N_layer_i, 1)
+      cur_layer_eta = np.reshape(self.eta[layer-1].T, (m, N_layer_cur, 1))
+      partial_c = np.reshape([np.multiply(cur_layer_partial_c[i], cur_layer_eta[i]) for i in range(m)], 
+                             (m,N_layer_cur,N_layer_before))
+      ## sum along with sample num, return (N_layer_i-1, N_layer_i)
+      partial_c = np.sum(partial_c.T, axis=2)
+      partial_c = (1.0-self.lambdaa)*partial_c + self.lambdaa*partial_reg_c
+      self.D_C[layer-1] = partial_c
       ## update eta
       if layer>2:
         ## cur_layer_partial_y is (m, N_cur_layer, N_cur_layer-1)
@@ -88,15 +102,17 @@ class RBFNetwork:
         ## set eta (N, m)
         self.eta[layer-2] = before_layer_partial.T 
     ## update parameters 
-    delta = self.learning_rate.delta(derivatives=[self.D_W]+self.D_beta)
+    delta = self.learning_rate.delta(derivatives=[self.D_W]+self.D_beta+self.D_C)
     delta_W = delta[0]
-    delta_beta = delta[1:]
+    delta_beta = delta[1:1+len(self.D_beta)]
+    delta_C = delta[1+len(self.D_beta):]
     self.W = self.W-delta_W
     self.beta = [self.beta[i]-delta_beta[i] for i in range(len(self.beta))]
+    self.C = [self.C[i]-delta_C[i] for i in range(len(self.C))]
 
   def loss(self, X, Y):
     self.forward(X)
-    return (1.0-self.lambdaa)*self.loss_fn.output(y=self.Z[-1], label=Y) + self.lambdaa*self.regularization.output(params=[self.W]+self.beta)
+    return (1.0-self.lambdaa)*self.loss_fn.output(y=self.Z[-1].T, label=Y) + self.lambdaa*self.regularization.output(params=[self.W]+self.beta)
 
   def predict(self, X):
     self.forward(X)

@@ -70,9 +70,15 @@ class NeuralNetwork:
     delta_b = delta[len(self.D_W):]
     self.W = [self.W[i]-delta_W[i] for i in range(len(self.W))]
     self.b = [self.b[i]-delta_b[i] for i in range(len(self.b))]
+
   def loss(self, X, Y):
     self.forward(X)
-    return (1.0-self.lambdaa)*self.loss_fn.output(y=self.activate_fn.output(z=self.Z[-1]), label=Y) + self.lambdaa*self.regularization.output(params=self.W+self.b)
+    if self.Z[-1].shape[0]==1:
+      return (1.0-self.lambdaa)*self.loss_fn.output(y=self.activate_fn.output(z=self.Z[-1]), label=Y) + self.lambdaa*self.regularization.output(params=self.W+self.b)
+    else:
+      max_v = np.max(self.Z[-1])
+      return (self.Z[-1].T==max_v).astype(float)
+
   def predict(self, X):
     self.forward(X)
     return (self.activate_fn.output(z=self.Z[-1])>0.5).astype(float)

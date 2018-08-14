@@ -39,10 +39,10 @@ learning_rate = MomentumLearningRate(learning_rate=alpha, beta=0.9)
 
 network = NeuralNetwork(topo=topo, alpha=alpha, learning_rate=learning_rate, lambdaa=lambdaa, regularization=L2Regularization).initialize()
 
-for epoch in range(5000):
+for epoch in range(300):
   network.forward(train_X)
   network.backward(train_Y)
-  if epoch % 100 == 0:
+  if epoch % 10 == 0:
     train_loss = np.mean(network.loss(train_X, train_Y))
     test_loss = np.mean(network.loss(test_X, test_Y))
     test_acc = network.accuracy(test_X, test_Y)

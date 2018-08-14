@@ -10,6 +10,7 @@ import numpy as np
 from feature_maker import FeatureMaker
 from rbf_nn import RBFNetwork
 from regularizor import L2Regularization
+from learning_rate import MomentumLearningRate
 
 
 src = ROOT_DIR+'/../../Data/xor/xor.csv'
@@ -30,16 +31,20 @@ print("Train Y : {}".format(train_Y))
 
 N_input = np.reshape(train_X[0],-1).shape[0]
 N_output = np.reshape(train_Y[0],-1).shape[0]
-topo = [N_input, 20, N_output]
-alpha = 1
-lambdaa = 0.
+topo = [N_input, 10, N_output]
+alpha = 0.01
+lambdaa = 0.0001
 print("nn topo : {}".format(topo))
-network = RBFNetwork(topo=topo, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
 
-for epoch in range(1000):
+## Momentum
+learning_rate = MomentumLearningRate(learning_rate=alpha, beta=0.99)
+
+network = RBFNetwork(topo=topo, init_std=1e-1, learning_rate=learning_rate, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
+
+for epoch in range(2000):
   network.forward(train_X)
   network.backward(train_Y)
-  if epoch % 10 == 0:
+  if epoch % 100 == 0:
     train_loss = np.mean(network.loss(train_X, train_Y))
     # print("Epoch:{} Training Loss:{}".format(epoch, train_loss))
     # # # test_loss = np.mean(network.loss(test_X, test_Y))

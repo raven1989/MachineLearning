@@ -10,6 +10,7 @@ import numpy as np
 from feature_maker import FeatureMaker
 from rbf_nn import RBFNetwork
 from regularizor import L2Regularization
+from learning_rate import MomentumLearningRate
 
 
 src = ROOT_DIR+'/../../Data/iris/iris_data.csv'
@@ -27,14 +28,17 @@ print("Test Y : {}\n...".format(test_Y[:5,:]))
 
 N_input = np.reshape(X[0],-1).shape[0]
 N_output = np.reshape(Y[0],-1).shape[0]
-topo = [N_input, 20, N_output]
+topo = [N_input, 50, N_output]
 alpha = 0.1
-lambdaa = 0.000001
+lambdaa = 0.
 print("nn topo : {}".format(topo))
 
-network = RBFNetwork(topo=topo, init_std=1e-3, alpha=alpha, lambdaa=lambdaa, regularization=L2Regularization).initialize()
+## Momentum
+learning_rate = MomentumLearningRate(learning_rate=alpha, beta=0.99)
 
-for epoch in range(23000):
+network = RBFNetwork(topo=topo, init_std=1e-2, alpha=alpha, learning_rate=learning_rate, lambdaa=lambdaa, regularization=L2Regularization).initialize()
+
+for epoch in range(100000):
   network.forward(train_X)
   network.backward(train_Y)
   if epoch % 1000 == 0:

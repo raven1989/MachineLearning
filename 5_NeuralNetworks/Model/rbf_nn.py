@@ -24,14 +24,14 @@ class RBFNetwork:
       raise ValueError("NeuralNetwork.topo must have 2 levels at least.")
     ### parameters
     ## beta.shape is (N_i, 1)
-    self.beta = [np.random.normal(0, self.init_std, size=(self.topo[i],1)) for i in range(1, 1+len(self.topo[1:-1]))]
+    self.beta = [np.random.RandomState(1357).normal(0, self.init_std, size=(self.topo[i],1)) for i in range(1, 1+len(self.topo[1:-1]))]
     ## c.shape is (N_i-1, N_i)
     # self.C = [np.random.uniform(low=0, high=1, size=(self.topo[i-1],self.topo[i])) for i in range(1, 1+len(self.topo[1:-1]))]
     ## model is susceptibel to neurons' centers, use uniformly distributed initialization and fixate them.
     self.C = [np.random.RandomState(5678).uniform(low=0, high=1, size=(self.topo[i-1],self.topo[i])) for i in range(1, 1+len(self.topo[1:-1]))]
     # print("C.shape:{}".format([c.shape for c in self.C]))
     ## only last layer is linerly connected
-    self.W = np.random.normal(0, self.init_std, size=self.topo[-2:])
+    self.W = np.random.RandomState(2468).normal(0, self.init_std, size=self.topo[-2:])
     ### parameters derivatives
     self.D_beta = [np.zeros(shape=(beta.shape)) for beta in self.beta]
     self.D_W = np.zeros(shape=(self.W.shape))

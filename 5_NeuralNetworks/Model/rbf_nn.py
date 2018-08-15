@@ -1,3 +1,4 @@
+# encoding:utf-8
 import sys
 import numpy as np
 from activate_fn import *
@@ -27,7 +28,10 @@ class RBFNetwork:
     self.beta = [np.random.RandomState(1357).normal(0, self.init_std, size=(self.topo[i],1)) for i in range(1, 1+len(self.topo[1:-1]))]
     ## c.shape is (N_i-1, N_i)
     # self.C = [np.random.uniform(low=0, high=1, size=(self.topo[i-1],self.topo[i])) for i in range(1, 1+len(self.topo[1:-1]))]
+    ###
     ## model is susceptibel to neurons' centers, use uniformly distributed initialization and fixate them.
+    ## 用均匀分布uniform代替正太分布normal, 这里相当于在训练数据上随机采样了，训练数据的范围是[0,1]
+    ###
     self.C = [np.random.RandomState(5678).uniform(low=0, high=1, size=(self.topo[i-1],self.topo[i])) for i in range(1, 1+len(self.topo[1:-1]))]
     # print("C.shape:{}".format([c.shape for c in self.C]))
     ## only last layer is linerly connected

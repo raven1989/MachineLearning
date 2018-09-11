@@ -54,15 +54,13 @@ for x,y in zip(X, Y):
     if x_feature_types[i]==0:
       ### 当前特征取值为f的个数
       f_cnt = class_cond[y][i].get(f, 0)
-      ### 当前特征可取值的个数
-      class_f_cnt = len(feature_maker.feature2index[i])
-      ### 拉普拉斯平滑
-      cond_prob = 1.0*(f_cnt+1) / (y_total_cnt+class_f_cnt)
-      print("y:{} feature:{} name:{} index:{} cond prob:{}".format(y, i, feature_maker.index2feature[i].get(f), f, cond_prob))
-      if cond_prob<0:
-        print(f_cnt, y_total_cnt, class_f_cnt)
-        sys.exit(0)
-      class_cond[y][i][f] += np.log(cond_prob)
+      if f_cnt>=1 or f_cnt==0:
+          ### 当前特征可取值的个数
+          class_f_cnt = len(feature_maker.feature2index[i])
+          ### 拉普拉斯平滑
+          cond_prob = 1.0*(f_cnt+1) / (y_total_cnt+class_f_cnt)
+          print("y:{} feature:{} name:{} index:{} cond prob:{}".format(y, i, feature_maker.index2feature[i].get(f), f, cond_prob))
+          class_cond[y][i][f] = np.log(cond_prob)
     elif x_feature_types[i]==1:
       ### 计算平均值和方差
       mean = class_cond[y][i]["sum"]*1.0/y_total_cnt
@@ -93,15 +91,15 @@ for y in feature_maker.feature2index[-1].values():
     class_f_cnt = len(feature_maker.feature2index[i])
     if x_feature_types[i]==0:
       default_cond_prob = 1.0/(y_total_cnt+class_f_cnt)
-      cond_prob = class_cond[y][i].get(f, default_cond_prob)
+      log_cond_prob = class_cond[y][i].get(f, default_cond_prob)
     elif x_feature_types[i]==1:
       mean = class_cond[y][i].get("mean")
       variance = class_cond[y][i].get("variance")
       cond_prob = 1.0/np.sqrt(2.0*np.pi*variance)*np.exp(-0.5*np.square(f-mean)/variance)
+      log_cond_prob = np.log(cond_prob)
     else:
       print("Unexpected feature type:{}".format(x_feature_type[i]))
     print("log cond prop:{}".format(cond_prob))
-    log_cond_prob = np.log(cond_prob)
     p[int(y)] += log_cond_prob
 
 print(p)

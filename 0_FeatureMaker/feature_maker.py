@@ -40,7 +40,7 @@ class FeatureMaker:
       self.min_max_scaler = MinMaxScaler()
     self.feature2index = None
     self.index2feature = None
-  def make(self, skip_rows=0, skip_cols=0):
+  def make(self, skip_rows=0, skip_cols=0, one_hot=True):
     raw_data = []
     self.feature2index = [{} for t in self.types]
     self.index2feature = [{} for t in self.types]
@@ -65,6 +65,8 @@ class FeatureMaker:
     raw_data = np.array(raw_data)
     x = raw_data[:,:-1]
     y = raw_data[:,-1:]
+    if not one_hot:
+      return x, y
     # print(raw_data)
     x = self.one_hot_encoder.fit_transform(X=x, y=y)#.toarray()
     if self.norm:

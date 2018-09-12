@@ -1,0 +1,119 @@
+#! coding:utf-8
+
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+import os
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(ROOT_DIR+"/../Model")
+sys.path.append(ROOT_DIR+"/../../0_FeatureMaker")
+import numpy as np
+from feature_maker import FeatureMaker
+import json
+import bisect
+
+src = ROOT_DIR+'/../../Data/watermelon/watermelon_3.0.csv'
+feature_types = [0,0,0,0,0,0,1,1,0]
+feature_maker = FeatureMaker(src=src, delimiter=',', types=feature_types, norm=False)
+X, Y = feature_maker.make(skip_rows=1, skip_cols=1, one_hot=True)
+Y = Y.flatten()
+print("X:{}\nY:{}".format(X, Y))
+
+### train
+num_sample = X.shape[0]
+num_continuous_feature = np.sum(feature_types[:-1])
+discrete_X = X[:,:-num_continuous_feature]
+continuous_X = X[:,num_continuous_feature:]
+
+### label种类数
+num_class = len(feature_maker.feature2index[-1])
+
+### 离散特征
+### 特征的属性数量总和
+num_property = discrete_X.shape[1]
+### 属性矩阵 num_class x num_property x num_property
+### 每一个元素N(c,i,j) 表示 (第c类 & 特征fa取值为i & 特征fb取值为j)
+N_shape = (num_class, num_property, num_property)
+print("N.shape:{}".format(N_shape))
+N = np.zeros(N_shape)
+### 特征分组 [i:i+1] 表示一个feature分组，由其property铺平而成
+feature_partition = feature_maker.one_hot_encoder.feature_indices_
+print("feature partition:{}".format(feature_partition))
+for i,x in enumerate(discrete_X):
+  x = np.reshape(x, (x.shape[0],1))
+  c = int(Y[i])
+  # print("c:{} x:{}".format(c, np.dot(x, x.T)))
+  N[c] += np.dot(x, x.T)
+  ### 将对角线置为0，因为对角线是属性自己计数，只要属性i存在则，N(c,i,i)必为1
+  np.fill_diagonal(N[c], np.zeros(num_property))
+print("N:{}".format(N))
+
+### 连续特征
+### 连续特征的联合概率如何处理？这里包含两种，
+### 第一个是离散和连续的联合概率
+### 第二个是连续和连续的联合概率
+# MEAN = []
+# STD = []
+# for c in feature_maker.index2feature[-1].keys():
+  # # print(c, continuous_X[Y==c,:])
+  # MEAN.append(np.mean(continuous_X[Y==c,:]))
+  # STD.append(np.std(continuous_X[Y==c,:]))
+# print("mean:{} std:{}".format(MEAN, STD))
+
+
+
+### test
+test = [["青绿", "蜷缩", "浊响", "清晰", "凹陷", "硬滑", 0.697, 0.460]]
+# test = [["浅白", "硬挺", "浊响", "清晰", "凹陷", "硬滑", 0.697, 0.460]]
+print("test:{}".format(json.dumps(test, ensure_ascii=False)))
+
+test_X = feature_maker.encode(X=test, one_hot=True)
+print("encoded test:{}".format(test_X))
+
+test_discrete = test_X[:,:-num_continuous_feature]
+test_continuous = test_X[:,-num_continuous_feature:]
+print("discrete test:{} continuous test:{}".format(test_discrete, test_continuous))
+
+threshold_m = 0
+
+pre = np.zeros((test_X.shape[0], num_class))
+for k,x in enumerate(test_discrete):
+  print("k:{} x:{}".format(k, x))
+  xx = np.reshape(x, (x.shape[0],1))
+  N_mask = np.dot(xx, xx.T)
+  # print(N_mask)
+  for c in range(num_class):
+    N_c = np.multiply(N[c], N_mask)
+    # print("N_{}:{}".format(c, N_c))
+    for i,fi in enumerate(x):
+      if fi==1:
+        #############################
+        ### 先计算先验概率P(c,fi) ###
+        #############################
+        ### label为c并且特征f取值为i的个数
+        d_fi = np.sum(N_c[i])
+        if d_fi<threshold_m:
+          continue
+        ### 特征f的属性个数
+        f_end = bisect.bisect_right(feature_partition, i)
+        num_f_property = feature_partition[f_end]-feature_partition[f_end-1]
+        prior_prob = (d_fi+1)*1.0/(num_sample+num_class*num_f_property)
+        prior_prob_log = np.log(prior_prob)
+        pre[k][c] += prior_prob_log
+        #######################################
+        ### 再计算条件概率 Σ log P(fj|c,fi) ###
+        #######################################
+        print("i:{} N_{}_{}:{}".format(i, c, i, N_c[i]))
+        for j,fj in enumerate(N_c[i]):
+          if fj>0:
+            d_fj = fj
+            f_end = bisect.bisect_right(feature_partition, j)
+            num_f_property = feature_partition[f_end]-feature_partition[f_end-1]
+            cond_prob = (d_fj+1)*1.0/(d_fi+num_f_property)
+            cond_prob_log = np.log(cond_prob)
+            pre[k][c] += cond_prob_log
+print("Predict:{}".format(np.exp(pre)))
+
+# print(test_x)
+# print(json.dumps(feature_maker.decode(test_x, one_hot=True), ensure_ascii=False))
+

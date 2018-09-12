@@ -40,6 +40,7 @@ class FeatureMaker:
       self.min_max_scaler = MinMaxScaler()
     self.feature2index = None
     self.index2feature = None
+
   def make(self, skip_rows=0, skip_cols=0, one_hot=True):
     raw_data = []
     self.feature2index = [{} for t in self.types]
@@ -76,8 +77,10 @@ class FeatureMaker:
       self.label_one_hot_encoder = OneHotEncoder(categorical_features=[0], sparse=False)
       y = self.label_one_hot_encoder.fit_transform(X=y)
     return x, y
+
   def shuffle(self, x, y):
     return shuffle(x, y)
+
   def train_test_split(self, x, y, test_size=0.1, train_size=None, random_state=None, shuffle=True, stratify=None):
     '''
     Parameters
@@ -125,6 +128,51 @@ class FeatureMaker:
             input type.
     '''
     return train_test_split(x, y, test_size=test_size, train_size=train_size, random_state=random_state, shuffle=True, stratify=stratify)
+
+  def encode(self, X, Y=None, one_hot=True):
+    ## exclude last col which is y
+    discrete_feature_idx = filter(lambda i:self.types[i]==0, range(len(self.types)-1))
+    x = np.array([[self.feature2index[i].get(f, f) for i,f in enumerate(xx)] for xx in X])
+    y = np.array([[self.feature2index[-1].get(f, f) for f in yy] for yy in Y]) if Y is not None else Y
+    # print("x:{}".format(x))
+    if one_hot:
+      x = self.one_hot_encoder.transform(x)
+      if y is not None and self.label_one_hot_encoder is not None:
+        y = self.label_one_hot_encoder.transform(y) 
+    if self.norm:
+      x = self.min_max_scaler.transform(X=x, y=y)
+    if y is not None:
+      return x, y
+    return x
+
+  def decode(self, X, Y=None, one_hot=True):
+    x = X
+    y = Y
+    ## exclude last col which is y
+    discrete_feature_idx = filter(lambda i:self.types[i]==0, range(len(self.types)-1))
+    continuous_feature_num = len(self.types)-1-len(discrete_feature_idx)
+    if one_hot:
+      x = []
+      for xx in X:
+        discrete_feature_end = -continuous_feature_num
+        indice = filter(lambda i:xx[i]==1, range(len(xx[:discrete_feature_end])))
+        discrete_x = self.one_hot_encoder.active_features_[indice] - self.one_hot_encoder.feature_indices_[:-1]
+        discrete_x = discrete_x.tolist()
+        continuous_x = xx[discrete_feature_end:].tolist()
+        # print("discrete:{}".format(type(discrete_x)))
+        # print("continuous:{}".format(continuous_x))
+        # print(discrete_x+continuous_x)
+        x.append(discrete_x+continuous_x)
+      if y is not None and self.label_one_hot_encoder is not None:
+        y = []
+        for yy in Y:
+          indice = filter(lambda i:yy[i]==1, range(len(yy)))
+          y = self.label_one_hot_encoder.active_features_[indice]
+    x = [[self.index2feature[i].get(f) if self.types[i]==0 else f for i,f in enumerate(xx)] for xx in x]
+    if y is not None:
+      y = [[self.index2feature[-1].get(f) for f in yy] for yy in y]
+      return x, y
+    return x
 
 
 if __name__ == '__main__':

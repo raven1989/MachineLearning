@@ -20,6 +20,7 @@ Y = Y.flatten()
 print("X:{}\nY:{}".format(X, Y))
 
 ### train
+print("Trianing begin...")
 num_sample = X.shape[0]
 num_continuous_feature = np.sum(feature_types[:-1])
 discrete_X = X[:,:-num_continuous_feature]
@@ -45,8 +46,6 @@ for i,x in enumerate(discrete_X):
   c = int(Y[i])
   # print("c:{} x:{}".format(c, np.dot(x, x.T)))
   N[c] += np.dot(x, x.T)
-  ### 将对角线置为0，因为对角线是属性自己计数，只要属性i存在则，N(c,i,i)必为1
-  # np.fill_diagonal(N[c], np.zeros(num_property))
 print("N:{}".format(N))
 
 ### 连续特征
@@ -60,6 +59,8 @@ print("N:{}".format(N))
   # MEAN.append(np.mean(continuous_X[Y==c,:]))
   # STD.append(np.std(continuous_X[Y==c,:]))
 # print("mean:{} std:{}".format(MEAN, STD))
+
+print("Trianing end...")
 
 
 
@@ -78,6 +79,7 @@ print("discrete test:{} continuous test:{}".format(test_discrete, test_continuou
 
 threshold_m = 0
 
+print("Pridicting begin...")
 pre = np.zeros((test_X.shape[0], num_class))
 for k,x in enumerate(test_discrete):
   # print("k:{} x:{}".format(k, x))

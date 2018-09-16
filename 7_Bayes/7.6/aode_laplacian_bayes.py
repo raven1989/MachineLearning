@@ -104,8 +104,8 @@ for k,x in enumerate(test_discrete):
         num_f_property = feature_partition[fi_end]-feature_partition[fi_end-1]
         prior_prob = (d_fi+1)*1.0/(num_sample+num_class*num_f_property)
         p *= prior_prob
-        print("P(c:{}-{},i:{}-{}) = {}  d_fi:{}".format(c, feature_maker.index2feature[-1].get(c),
-                                                        i, feature_maker.index2feature[fi_end-1].get(i-feature_partition[fi_end-1]), 
+        print("P(c:{}-{},i:{}-{}) = {}  d_fi:{}".format(c, feature_maker.get_property_by_one_hot_encoded_index(c, is_label=True), 
+                                                        i, feature_maker.get_property_by_one_hot_encoded_index(i, is_label=False), 
                                                         prior_prob, 
                                                         d_fi))
         #######################################
@@ -118,9 +118,9 @@ for k,x in enumerate(test_discrete):
             num_f_property = feature_partition[fj_end]-feature_partition[fj_end-1]
             cond_prob = (d_fj+1)*1.0/(d_fi+num_f_property)
             p *= cond_prob
-            print("P(j:{}-{}|c:{}-{},i:{}-{}) = {}  d_fi:{} d_fj:{}".format(j, feature_maker.index2feature[fj_end-1].get(j-feature_partition[fj_end-1]), 
-                                                               c, feature_maker.index2feature[-1].get(c),
-                                                               i, feature_maker.index2feature[fi_end-1].get(i-feature_partition[fi_end-1]), 
+            print("P(j:{}-{}|c:{}-{},i:{}-{}) = {}  d_fi:{} d_fj:{}".format(j, feature_maker.get_property_by_one_hot_encoded_index(j, is_label=False), 
+                                                               c, feature_maker.get_property_by_one_hot_encoded_index(c, is_label=True),
+                                                               i, feature_maker.get_property_by_one_hot_encoded_index(i, is_label=False), 
                                                                cond_prob, 
                                                                d_fi, d_fj))
     print("k:{} c:{} p:{}".format(k, c, p))
@@ -129,4 +129,8 @@ print("Predict:{}".format(pre))
 
 # print(test_x)
 # print(json.dumps(feature_maker.decode(test_x, one_hot=True), ensure_ascii=False))
+# print(feature_maker.get_property_one_hot_encoded_index(0, "青绿"))
+# print(feature_maker.get_property_one_hot_encoded_index(0, "浅白"))
+# print(feature_maker.get_property_one_hot_encoded_index(1, "蜷缩"))
+# print(feature_maker.get_property_one_hot_encoded_index(-1, "坏瓜"))
 

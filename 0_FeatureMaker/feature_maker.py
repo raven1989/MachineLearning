@@ -5,6 +5,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
+import bisect
 
 import json
 
@@ -173,6 +174,30 @@ class FeatureMaker:
       y = [[self.index2feature[-1].get(f) for f in yy] for yy in y]
       return x, y
     return x
+
+  def get_property_one_hot_encoded_index(self, feature, prop):
+    if self.one_hot_encoder is None:
+      return False
+    idx = int(self.feature2index[feature].get(prop))
+    if feature==-1 or feature+1==len(self.feature2index):
+      offset = 0
+    elif feature>=0 and feature<len(self.feature2index):
+      offset = self.one_hot_encoder.feature_indices_[feature]
+    else:
+      return False
+    idx += offset
+    return idx
+
+  def get_property_by_one_hot_encoded_index(self, prop_idx, is_label=False):
+    if self.one_hot_encoder is None:
+      return False
+    if not is_label:
+      i = bisect.bisect_right(self.one_hot_encoder.feature_indices_, prop_idx)-1
+      idx = prop_idx - self.one_hot_encoder.feature_indices_[i]
+    else:
+      i = -1
+      idx = prop_idx - 0
+    return self.index2feature[i].get(idx)
 
 
 if __name__ == '__main__':

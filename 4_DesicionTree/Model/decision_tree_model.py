@@ -127,9 +127,14 @@ class DecisionTreeModel:
     @property
     def name(self):
       return "Entropy Gain"
-    def __entropy__(self, labels):
+    def __entropy__(self, labels, data_weights=None):
       y = np.reshape(labels, -1)
-      y_counter = collections.Counter(y)
+      # y_counter = collections.Counter(y)
+      y_counter = {}
+      for i,y in enumerate(labels):
+        if y_counter.get(y) is None:
+          y_counter[y] = 0.0
+        y_counter[y] += 1 if data_weights is None else data_weights[i]
       total = sum(y_counter.values())
       ent = 0
       for v in y_counter.values():
@@ -137,21 +142,22 @@ class DecisionTreeModel:
         ent -= p * math.log(p,2) if p>0.0 else 0.0
       return ent
     ## return gain and boundary value if it's continuous feature
-    def __gain__(self, data, feature):
+    def __gain__(self, data, feature, data_weights=None):
       # if type(feature) != type(DecisionTreeModel.Feature):
         # raise ValueError("Need type {} for feature".format(DecisionTreeModel.Feature))
       x = data[:,:-1]
       y = data[:,-1]
       total_cnt = len(y)
-      whole_ent = self.__entropy__(y)
+      whole_ent = self.__entropy__(y, data_weights)
       d_ent = 0.0
       boundary = 0.0
       gain = 0.0
       if feature.feature_type == DecisionTreeModel.Feature.FeatureType.DISCRETE:
         for fea_idx in feature.index2feavalue:
           d = data[data[:,feature.feature_index]==fea_idx,-1]
+          d_w = None if data_weights is None else data_weights[data[:,feature.feature_index]==fea_idx]
           w = len(d)*1.0/total_cnt
-          d_ent += self.__entropy__(d) * w
+          d_ent += self.__entropy__(d, d_w) * w
         gain = whole_ent - d_ent
       elif feature.feature_type == DecisionTreeModel.Feature.FeatureType.CONTINUOUS:
         sorted_fea = sorted(np.reshape(data[:,feature.feature_index], -1))
@@ -164,6 +170,8 @@ class DecisionTreeModel:
         for b in boundary_candidates:
           d_lt = data[data[:,feature.feature_index]<=b, -1]
           d_gt = data[data[:,feature.feature_index]>b, -1]
+          d_lt_w = None if data_weights is None else data_weights[data[:,feature.feature_index]<=b]
+          d_gt_w = None if data_weights is None else data_weights[data[:,feature.feature_index]>b]
           d_lt_cnt = len(d_lt)
           d_gt_cnt = len(d_gt)
           d_ent = d_lt_cnt*1.0/total_cnt*self.__entropy__(d_lt) \
@@ -175,7 +183,7 @@ class DecisionTreeModel:
         boundary = min_b
       return gain, boundary
     ## choose feature s.t. max gain
-    def select_feature(self, data, feature_candidates):
+    def select_feature(self, data, feature_candidates, data_weights=None):
       is_leaf = False
       fea_gains = []
       max_fea_idx = None
@@ -183,7 +191,7 @@ class DecisionTreeModel:
       max_boundary = 0.0
       # print("selecting feature ...")
       for i,feature in enumerate(feature_candidates):
-        fea_gain, boundary = self.__gain__(data, feature)
+        fea_gain, boundary = self.__gain__(data, feature, data_weights)
         # print("{} {} {}".format(feature.feature_name, fea_gain, boundary))
         fea_gains.append(fea_gain)
         if fea_gain > max_gain:
@@ -282,7 +290,7 @@ class DecisionTreeModel:
       non_leaf["boundary"] = boundary
     return non_leaf
 
-  def __generate_decision_tree_recursively__(self, model, data, feature_candidates, test_data):
+  def __generate_decision_tree_recursively__(self, model, data, feature_candidates, test_data, data_weights=None):
     node = None
     x = data[:,:-1]
     y = data[:,-1]
@@ -295,7 +303,7 @@ class DecisionTreeModel:
       is_leaf = True
     else:
       ## choose a feature to divide data
-      is_leaf, chosen_fea_index, chosen_value, chosen_boundary = model.select_feature(data, feature_candidates)
+      is_leaf, chosen_fea_index, chosen_value, chosen_boundary = model.select_feature(data, feature_candidates, data_weights)
       if not is_leaf: 
         chosen_feature = feature_candidates[chosen_fea_index]
         if self.pre_pruning and self.__if_pre_pruning__(chosen_feature, data, test_data, chosen_boundary):
@@ -309,10 +317,11 @@ class DecisionTreeModel:
             next_feature_candidates.pop(chosen_fea_index)
             for fea_value_idx in chosen_feature.index2feavalue:
               divided = data[data[:,chosen_feature.feature_index]==fea_value_idx,:]
+              divided_weights = data_weights[data[:,chosen_feature.feature_index]==fea_value_idx]
               next_test_data = test_data if test_data is None else test_data[test_data[:,chosen_feature.feature_index]==fea_value_idx, :]
               if len(divided) > 0:
                 child = self.__generate_decision_tree_recursively__(model, 
-                    divided, next_feature_candidates, next_test_data)
+                    divided, next_feature_candidates, next_test_data, divided_weights)
                 if child != None:
                   children[chosen_feature.get_feature_value_by_index(fea_value_idx)] = child
               ## if divided is empty, add a leaf node labeled by the most label of before-divided y as a leaf child
@@ -322,13 +331,15 @@ class DecisionTreeModel:
                     self.__make_leaf_node__(feature_label, label_most, 0)
           elif chosen_feature.feature_type == self.Feature.FeatureType.CONTINUOUS:
             divided_lt = data[data[:,chosen_feature.feature_index]<=chosen_boundary, :]
+            divided_lt_weights = data_weights[data[:,chosen_feature.feature_index]<=chosen_boundary]
             test_data_lt = test_data if test_data is None else test_data[test_data[:,chosen_feature.feature_index]<=chosen_boundary, :]
             divided_gt = data[data[:,chosen_feature.feature_index]>chosen_boundary, :]
+            divided_gt_weights = data_weights[data[:,chosen_feature.feature_index]>chosen_boundary]
             test_data_gt = test_data if test_data is None else test_data[test_data[:,chosen_feature.feature_index]>chosen_boundary, :]
             child_lt = self.__generate_decision_tree_recursively__(model, 
-                divided_lt, next_feature_candidates, test_data_lt)
+                divided_lt, next_feature_candidates, test_data_lt, divided_lt_weights)
             child_gt = self.__generate_decision_tree_recursively__(model, 
-                divided_gt, next_feature_candidates, test_data_gt)
+                divided_gt, next_feature_candidates, test_data_gt, divided_gt_weights)
             if child_lt != None:
               children[True] = child_lt
             if child_gt != None:
@@ -344,7 +355,7 @@ class DecisionTreeModel:
       node = self.__make_leaf_node__(feature_label, label_most, samples)
     return node
 
-  def fit(self, data, algo_model, split_ratio=None, prune="no"):
+  def fit(self, data, algo_model, split_ratio=None, prune="no", data_weights=None):
     model = self.ALGO_MODEL_FACTORY.get(algo_model)
     if model == None:
       raise ValueError("Algorithm model {} not found, options are {}".fotmat(algo_model, ALGO_MODEL_FACTORY.keys()))
@@ -368,7 +379,7 @@ class DecisionTreeModel:
       # print("test data:")
       # print(self.__display_2d__(self.__reverse_data_preprocess__(self.test_data)))
     feature_candidates = [fea for fea in self.features[:-1]]
-    self.root = self.__generate_decision_tree_recursively__(model, self.data, feature_candidates, self.test_data)
+    self.root = self.__generate_decision_tree_recursively__(model, self.data, feature_candidates, self.test_data, data_weights)
 
   def predict(self, x, mapped=False, root=None):
     # print(self.__display_2d__(x))

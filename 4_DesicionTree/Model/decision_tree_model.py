@@ -119,7 +119,7 @@ class DecisionTreeModel:
     @property
     def name(self):
       return "Abstract Model"
-    def select_feature(self, data, feature_candidates):
+    def select_feature(self, data, feature_candidates, data_weights=None):
       raise NotImplementedError("Abstract method select_feature must be implemented.")
 
   class Id3Model(AlgoModel):
@@ -246,7 +246,7 @@ class DecisionTreeModel:
             boundary = b
       return gini_index, boundary
     ## choose feature s.t. min gini_index(d,f)
-    def select_feature(self, data, feature_candidates):
+    def select_feature(self, data, feature_candidates, data_weights=None):
       is_leaf = False
       gini_indexes = []
       chosen_gini_index = None
@@ -317,7 +317,7 @@ class DecisionTreeModel:
             next_feature_candidates.pop(chosen_fea_index)
             for fea_value_idx in chosen_feature.index2feavalue:
               divided = data[data[:,chosen_feature.feature_index]==fea_value_idx,:]
-              divided_weights = data_weights[data[:,chosen_feature.feature_index]==fea_value_idx]
+              divided_weights = None if data_weights is None else data_weights[data[:,chosen_feature.feature_index]==fea_value_idx]
               next_test_data = test_data if test_data is None else test_data[test_data[:,chosen_feature.feature_index]==fea_value_idx, :]
               if len(divided) > 0:
                 child = self.__generate_decision_tree_recursively__(model, 
@@ -331,10 +331,10 @@ class DecisionTreeModel:
                     self.__make_leaf_node__(feature_label, label_most, 0)
           elif chosen_feature.feature_type == self.Feature.FeatureType.CONTINUOUS:
             divided_lt = data[data[:,chosen_feature.feature_index]<=chosen_boundary, :]
-            divided_lt_weights = data_weights[data[:,chosen_feature.feature_index]<=chosen_boundary]
+            divided_lt_weights = None if data_weights is None else data_weights[data[:,chosen_feature.feature_index]<=chosen_boundary]
             test_data_lt = test_data if test_data is None else test_data[test_data[:,chosen_feature.feature_index]<=chosen_boundary, :]
             divided_gt = data[data[:,chosen_feature.feature_index]>chosen_boundary, :]
-            divided_gt_weights = data_weights[data[:,chosen_feature.feature_index]>chosen_boundary]
+            divided_gt_weights = None if data_weights is None else data_weights[data[:,chosen_feature.feature_index]>chosen_boundary]
             test_data_gt = test_data if test_data is None else test_data[test_data[:,chosen_feature.feature_index]>chosen_boundary, :]
             child_lt = self.__generate_decision_tree_recursively__(model, 
                 divided_lt, next_feature_candidates, test_data_lt, divided_lt_weights)
@@ -400,7 +400,8 @@ class DecisionTreeModel:
           key = fea.get_feature_value_by_index(sample[fea_idx]) if mapped else sample[fea_idx]
         elif fea_type == self.Feature.FeatureType.CONTINUOUS:
           boundary = cursor.get("boundary")
-          key = sample[fea_idx]<=boundary
+          key = float(sample[fea_idx])<=boundary
+          # print("feature:{} type:{} boundary:{} x:{} key:{}".format(fea_name, fea_type, boundary, sample[fea_idx], key))
         else:
           raise ValueError("DecisionTreeModel feature does not has type:{}".format(fea_type))
         cursor = children.get(key)

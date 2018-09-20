@@ -16,6 +16,7 @@ class DecisionTreeAsWeakClassifier(WeakClassifier):
    
   def __init__(self, model, label_mapping):
     self.classifier = DecisionTreeModel()
+    self.classifier.set_max_depth(2)
     self.model = model
     self.label_mapping = label_mapping
 
@@ -36,7 +37,7 @@ if __name__ == "__main__":
   # data = np.loadtxt(ROOT_DIR+"/../../4_DecisionTree/watermelon/watermelon_3.0.csv", dtype=str, delimiter=",", skiprows=0)
   data = data[:,1:]
 
-  num_weak = 10
+  num_weak = 4
   label_map = {"好瓜":1., "坏瓜":-1.}
   weak_classifiers = [DecisionTreeAsWeakClassifier(model="id3", label_mapping=label_map) for i in range(num_weak)]
   model = AdaBoostClassifier(weak_classifiers=weak_classifiers)

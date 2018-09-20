@@ -42,7 +42,7 @@ class AdaBoostClassifier:
         break
       alpha = 0.5*np.log((1.0-error+epsilon)/(error+epsilon))
       self.alpha.append(alpha)
-      print("t:{} alpha:{}\ndistribution:{}\nd_sum:{}".format(t, self.alpha[t], distribution, np.sum(distribution)))
+      # print("t:{} alpha:{}\ndistribution:{}\nd_sum:{}".format(t, self.alpha[t], distribution, np.sum(distribution)))
       d = [distribution[i]*np.exp(-self.alpha[t]*pre[i]*real[i]) for i in range(m)]
       # print("d:{}".format(d))
       z = np.sum(d)

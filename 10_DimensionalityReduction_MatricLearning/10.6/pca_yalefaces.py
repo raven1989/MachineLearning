@@ -17,20 +17,33 @@ for gif in glob.iglob(src):
   im = Image.open(gif)
   imgs.append(np.asarray(im))
 # im.show()
-shape = imgs[0].shape
-print("Load gifs count:{} shape:{}".format(len(imgs), shape))
+
+shape = imgs[1].shape
+width, height = shape
+count = len(imgs)
+print("Load gifs count:{} shape:{}".format(count, shape))
+
 
 flat_imgs = np.array([i.flatten() for i in imgs])
-print("X.shape:{}".format(flat_imgs.shape))
+X = flat_imgs
+print("X.shape:{}".format(X.shape))
+
+Image.fromarray(np.reshape(X[30], (width, height))).show()
 
 ### hyper
-d = 20
+d = 0.98
 
-pca = PCA(n_components=d)
-res = pca.fit_transform(flat_imgs)
-print("Result.shape:{}".format(res.shape))
+# pca = PCA(n_components=d, svd_solver="randomized")
+pca = PCA(n_components=d, svd_solver="full")
+Z = pca.fit_transform(flat_imgs)
+print("Pca成分的方差:{}".format(pca.explained_variance_))
+print("Pca成分的方差比例:{}".format(pca.explained_variance_ratio_))
+W = pca.components_
+# W = pca.singular_values_
+print("Z.shape:{} W.shape:{}".format(Z.shape, W.shape))
+### 利用 XX = ZW' 还原X
+XX = np.dot(Z, W)
+XX = np.reshape(XX, (count, width, height))
 
-# Image.fromarray(np.reshape(res[0],(50,40))).show()
+Image.fromarray(XX[30]).show()
 
-# res = Image.fromarray(img)
-# res.show()

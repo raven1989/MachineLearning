@@ -67,12 +67,18 @@ class FeatureMaker:
     raw_data = np.array(raw_data)
     x = raw_data[:,:-1]
     y = raw_data[:,-1:]
-    if not one_hot:
-      return x, y
+    if one_hot:
     # print(raw_data)
-    x = self.one_hot_encoder.fit_transform(X=x, y=y)#.toarray()
+      x = self.one_hot_encoder.fit_transform(X=x, y=y)#.toarray()
     if self.norm:
-      x = self.min_max_scaler.fit_transform(X=x, y=y)
+      if one_hot:
+        x = self.min_max_scaler.fit_transform(X=x, y=y)
+      else:
+        feature_types = np.array(self.types[:-1])
+        scaled_x = self.min_max_scaler.fit_transform(X=x[:,feature_types==1], y=y)
+        # print(scaled_x)
+        x = np.column_stack((x[:,feature_types==0],scaled_x))
+      # print(x)
     ## one-hot encoding y if needed
     if len(self.feature2index[-1])>2:
       self.label_one_hot_encoder = OneHotEncoder(categorical_features=[0], sparse=False)

@@ -138,7 +138,7 @@ def ensemble_tree(X, Y):
   return sort_selected
 
 if __name__ == '__main__':
-  # selected = chi2_test(X, Y, kbest=10)
+  # selected = chi2_test(X, Y, kbest=100)
   # selected = rfe(X, Y, kbest=10)
   # selected = l1_norm(X, Y)
   selected = ensemble_tree(X, Y)

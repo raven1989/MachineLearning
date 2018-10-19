@@ -42,7 +42,7 @@ class FeatureMaker:
     self.feature2index = None
     self.index2feature = None
 
-  def make(self, skip_rows=0, skip_cols=0, one_hot=True):
+  def make(self, skip_rows=0, skip_cols=0, one_hot=True, one_hot_y=False):
     raw_data = []
     self.feature2index = [{} for t in self.types]
     self.index2feature = [{} for t in self.types]
@@ -80,7 +80,7 @@ class FeatureMaker:
         x = np.column_stack((x[:,feature_types==0],scaled_x))
       # print(x)
     ## one-hot encoding y if needed
-    if len(self.feature2index[-1])>2:
+    if one_hot_y and len(self.feature2index[-1])>2:
       self.label_one_hot_encoder = OneHotEncoder(categorical_features=[0], sparse=False)
       y = self.label_one_hot_encoder.fit_transform(X=y)
     return x, y

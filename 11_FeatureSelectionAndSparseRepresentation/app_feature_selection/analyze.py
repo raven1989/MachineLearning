@@ -31,8 +31,8 @@ with open("app_noted_new.utf8") as f:
   for line in f:
     sp = line.strip().split("\t")
     app = sp[IDX_PACKAGE]
-    fea = "{}-{}".format(sp[IDX_PACKAGE], sp[IDX_NAME])
-    # fea = sp[IDX_MAIN_CLASS]
+    # fea = "{}-{}".format(sp[IDX_PACKAGE], sp[IDX_NAME])
+    fea = sp[IDX_MAIN_CLASS]
     # fea = sp[IDX_SUB_CLASS]
     # rest = "\t".join(sp[1:])
     if fea not in fea_to_index:
